@@ -16,7 +16,7 @@ Ochiladi: http://localhost:5173
 Dev rejimda `vite.config.js` dagi proxy ishlatiladi — CORS muammosi bo'lmaydi:
 
 ```js
-proxy: { '/api': { target: 'http://192.168.1.13:8000', changeOrigin: true } }
+proxy: { '/api': { target: 'http://192.168.1.20:8000', changeOrigin: true } }
 ```
 
 Manzil o'zgarsa faqat shu qatorni tahrirlang.
@@ -24,7 +24,7 @@ Manzil o'zgarsa faqat shu qatorni tahrirlang.
 Production build uchun `.env` faylida:
 
 ```
-VITE_API_BASE=http://192.168.1.13:8000
+VITE_API_BASE=http://192.168.1.20:8000
 ```
 
 ## Struktura
@@ -60,7 +60,7 @@ src/
 
 ## API bilan bog'lanish
 
-Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.13:8000/docs`
+Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.20:8000/docs`
 
 | Endpoint | Qachon | Parametrlar |
 |---|---|---|

@@ -17,7 +17,7 @@ export default defineConfig({
     proxy: {
       // CORS muammosini hal qiladi: /api -> backend
       '/api': {
-        target: 'http://192.168.1.13:8000',
+        target: 'http://192.168.1.20:8000',
         changeOrigin: true
       }
     }
