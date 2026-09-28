@@ -1,13 +1,25 @@
 <script setup>
+import { computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 
-defineProps({
-  refreshing: { type: Boolean, default: false },
-  online: { type: Boolean, default: true }
+const props = defineProps({
+  // POST /api/v1/collect fonda ishlayapti
+  collecting: { type: Boolean, default: false },
+  // cooldown tugaguncha qolgan soniya
+  cooldown:   { type: Number, default: 0 },
+  // qisqa holat matni: "Ma'lumot yig'ilmoqda…", "Yangilandi" va h.k.
+  message:    { type: String, default: null },
+  online:     { type: Boolean, default: true }
 })
-const emit = defineEmits(['refresh', 'toggle-sidebar'])
+const emit = defineEmits(['collect', 'toggle-sidebar'])
 
 const { theme, toggle } = useTheme()
+
+const collectTitle = computed(() => {
+  if (props.cooldown) return `${props.cooldown} soniyadan keyin qayta urinib ko'ring`
+  if (props.collecting) return 'Yig\'ish ketyapti…'
+  return 'Saytlardan hozir yangi ma\'lumot yig\'ish'
+})
 </script>
 
 <template>
@@ -27,6 +39,10 @@ const { theme, toggle } = useTheme()
     </a>
 
     <div class="hdr__right">
+      <Transition name="fade">
+        <span v-if="message" class="hdr__msg">{{ message }}</span>
+      </Transition>
+
       <span class="pulse" :class="{ 'pulse--off': !online }">
         <span class="pulse__dot"><i class="pulse__ring" /></span>
         <span class="pulse__label">{{ online ? 'Jonli' : 'Uzilgan' }}</span>
@@ -36,8 +52,15 @@ const { theme, toggle } = useTheme()
         <i :class="theme === 'dark' ? 'ti ti-sun' : 'ti ti-moon'" />
       </button>
 
-      <button class="btn btn--ghost btn--icon" :disabled="refreshing" @click="emit('refresh')" aria-label="Yangilash">
-        <i class="ti ti-refresh" :class="{ 'is-spinning': refreshing }" />
+      <button
+        class="btn btn--ghost"
+        :class="{ 'btn--icon': !cooldown }"
+        :disabled="collecting || cooldown > 0"
+        :title="collectTitle"
+        @click="emit('collect')"
+      >
+        <i class="ti ti-refresh" :class="{ 'is-spinning': collecting }" />
+        <span v-if="cooldown" class="mono">{{ cooldown }}s</span>
       </button>
     </div>
   </header>
@@ -60,6 +83,19 @@ const { theme, toggle } = useTheme()
 }
 
 .hdr__burger { display: none; }
+
+.hdr__msg {
+  font-size: 11.5px;
+  color: var(--text-2);
+  background: var(--surface-sunk);
+  border-radius: var(--r-full);
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .hdr__msg { display: none; }
+}
 
 .brand {
   display: flex;

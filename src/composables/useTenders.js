@@ -1,6 +1,5 @@
 import { ref, reactive, computed, watch } from 'vue'
-import { fetchItems } from '@/api/tenders'
-import { isToday, deadlineInfo } from '@/utils/format'
+import { fetchItems, updateInterest } from '@/api/tenders'
 
 export const DEFAULT_FILTERS = Object.freeze({
   q: '',
@@ -23,8 +22,17 @@ function cloneDefaults() {
   return { ...DEFAULT_FILTERS, domains: [] }
 }
 
+/** Tablar: /api/v1/items dagi `interest` filtri qiymatlari */
+export const TABS = Object.freeze([
+  { value: 'all',            label: 'Hammasi',    icon: 'ti-layout-grid',  count: 'total' },
+  { value: 'new',            label: 'Yangi',      icon: 'ti-sparkles',     count: 'new' },
+  { value: 'interested',     label: 'Qiziqarli',  icon: 'ti-star',         count: 'interested' },
+  { value: 'not_interested', label: 'Qiziqarsiz', icon: 'ti-thumb-down',   count: 'not_interested' }
+])
+
 export function useTenders() {
   const filters  = reactive(cloneDefaults())
+  const interest = ref('all')   // faol tab
   const sort     = ref('')   // '' = API standarti
   const page     = ref(1)
   const pageSize = ref(12)   // API cheklovi: 1..100
@@ -52,29 +60,6 @@ export function useTenders() {
     (filters.dateTo ? 1 : 0)
   )
 
-  /**
-   * Joriy sahifa bo'yicha ko'rsatkichlar.
-   * Narx bir necha valyutada keladi (UZS / USD / EUR), shuning uchun
-   * summa faqat UZS elementlar bo'yicha hisoblanadi — aralashtirish noto'g'ri bo'lardi.
-   */
-  const stats = computed(() => {
-    const uzs = items.value
-      .filter(i => (i.currency || 'UZS') === 'UZS')
-      .map(i => Number(i.price))
-      .filter(p => Number.isFinite(p) && p > 0)
-
-    return {
-      total: total.value,
-      today: items.value.filter(i => isToday(i.first_seen_at)).length,
-      deadlineSoon: items.value.filter(i => {
-        const d = deadlineInfo(i.extra?.deadline)
-        return d && d.days >= 0 && d.days <= 7
-      }).length,
-      sumUzs: uzs.reduce((a, b) => a + b, 0),
-      pricedCount: uzs.length
-    }
-  })
-
   /** Filtrlarni /api/v1/items query parametrlariga aylantiradi */
   function buildParams() {
     const q = filters.q.trim()
@@ -83,6 +68,8 @@ export function useTenders() {
       category:   filters.category || undefined,
       // API: bitta 'etender.uzex.uz' yoki bir nechtasi 'a.uz,b.uz'
       domain:     filters.domains.length ? filters.domains.join(',') : undefined,
+      // 'all' standart qiymat — yubormaymiz
+      interest:   interest.value === 'all' ? undefined : interest.value,
       price_min:  filters.priceMin !== '' ? filters.priceMin : undefined,
       price_max:  filters.priceMax !== '' ? filters.priceMax : undefined,
       date_from:  filters.dateFrom ? `${filters.dateFrom}T00:00:00` : undefined,
@@ -145,6 +132,34 @@ export function useTenders() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  /**
+   * Tenderga xodim belgisini qo'yadi (PATCH /items/{id}/interest).
+   * Optimistik: avval ekranda o'zgaradi, server rad etsa orqaga qaytariladi.
+   * @returns {Promise<string>} oldingi holat — stats sonlarini tuzatish uchun
+   */
+  async function setInterest(item, value) {
+    const prev = item.interest ?? 'new'
+    if (prev === value) return prev
+
+    item.interest = value
+    try {
+      await updateInterest(item.id, value)
+    } catch (e) {
+      item.interest = prev
+      throw e
+    }
+
+    // Joriy tab bilan mos kelmay qolgan bo'lsa ro'yxatdan chiqaramiz
+    if (interest.value !== 'all' && interest.value !== value) {
+      const i = items.value.findIndex(x => x.id === item.id)
+      if (i !== -1) {
+        items.value.splice(i, 1)
+        total.value = Math.max(0, total.value - 1)
+      }
+    }
+    return prev
+  }
+
   /** Manbani tanlash/olib tashlash (ko'p tanlov) */
   function toggleDomain(domain) {
     if (!domain) {
@@ -161,7 +176,11 @@ export function useTenders() {
     Object.assign(filters, cloneDefaults())
     syncingSort = sort.value !== ''
     sort.value = ''
-    apply()
+
+    // Tab o'zgarsa uning kuzatuvchisi apply() ni o'zi chaqiradi —
+    // aks holda bitta tozalashga ikkita so'rov ketardi
+    if (interest.value !== 'all') interest.value = 'all'
+    else apply()
   }
 
   // Foydalanuvchi saralashni o'zgartirsa darhol qayta yuklaymiz.
@@ -172,6 +191,9 @@ export function useTenders() {
     apply()
   })
 
+  // Tab almashganda 1-sahifadan qayta yuklaymiz
+  watch(interest, apply)
+
   // Qidiruvdan chiqilganda relevance ma'nosini yo'qotadi — standartga qaytamiz
   watch(isSearchMode, (on) => {
     if (!on && sort.value === 'relevance') {
@@ -181,9 +203,9 @@ export function useTenders() {
   })
 
   return {
-    filters, sort, page, pageSize,
+    filters, interest, sort, page, pageSize,
     items, total, pages, loading, error, lastQuery,
-    isSearchMode, totalPages, activeFilterCount, stats,
-    load, apply, applyDebounced, goTo, toggleDomain, reset
+    isSearchMode, totalPages, activeFilterCount,
+    load, apply, applyDebounced, goTo, toggleDomain, setInterest, reset
   }
 }

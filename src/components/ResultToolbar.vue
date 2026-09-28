@@ -74,7 +74,7 @@ const options = computed(() => [
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 16px;
+
 }
 
 .bar__left { display: flex; align-items: center; gap: 12px; min-width: 0; }

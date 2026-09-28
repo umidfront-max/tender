@@ -10,8 +10,11 @@ import { looksLikeHtml, sanitizeHtml, stripHtml } from '@/utils/html'
 const props = defineProps({
   item:   { type: Object, required: true },
   source: { type: Object, default: () => ({}) },
-  index:  { type: Number, default: 0 }
+  index:  { type: Number, default: 0 },
+  busy:   { type: Boolean, default: false }
 })
+
+const emit = defineEmits(['interest'])
 
 const open = ref(false)
 
@@ -24,6 +27,12 @@ const relTime  = computed(() => formatRelative(props.item.published_at || props.
 const deadline = computed(() => deadlineInfo(extra.value.deadline))
 const status   = computed(() => statusLabel(extra.value.status))
 const score    = computed(() => formatScore(props.item.score))
+
+/** Xodim belgisi: new | interested | not_interested */
+const interest = computed(() => props.item.interest ?? 'new')
+
+/** was_updated — manba saytda tender o'zgartirilgan */
+const updated = computed(() => props.item.was_updated === true)
 
 const goods      = computed(() => extra.value.goods ?? [])
 const categories = computed(() => extra.value.categories ?? [])
@@ -41,69 +50,107 @@ const facts = computed(() => [
   extra.value.region       && { label: 'Hudud',             value: extra.value.region,       icon: 'ti-map-pin' },
   extra.value.deadline     && { label: 'Takliflar muddati', value: formatDateTime(extra.value.deadline), icon: 'ti-hourglass' },
   { label: 'E\'lon sanasi', value: formatDate(props.item.published_at), icon: 'ti-calendar-event' },
+  updated.value            && { label: 'O\'zgartirilgan',   value: formatDateTime(props.item.updated_at), icon: 'ti-pencil' },
   extra.value.code         && { label: 'Saytdagi kod',   value: extra.value.code, icon: 'ti-hash', mono: true },
   extra.value.lots_count   && { label: 'Lotlar soni',    value: formatNumber(extra.value.lots_count),  icon: 'ti-stack-2' },
   extra.value.goods_count  && { label: 'Tovarlar soni',  value: formatNumber(extra.value.goods_count), icon: 'ti-package' },
   { label: 'Platforma',        value: props.source.name || props.item.domain, icon: 'ti-world' },
   { label: 'Oxirgi ko\'rilgan', value: formatDate(props.item.last_seen_at),   icon: 'ti-refresh' }
 ].filter(Boolean))
+
+/** Tugmani qayta bosish belgini olib tashlaydi (API da bu `new`) */
+function mark(value) {
+  emit('interest', props.item, interest.value === value ? 'new' : value)
+}
 </script>
 
 <template>
   <article
     class="card"
-    :class="{ 'card--open': open }"
+    :class="[`card--i-${interest}`, { 'card--open': open, 'card--busy': busy }]"
     :style="{ animationDelay: `${Math.min(index, 10) * 35}ms`, '--src-color': source.color || 'var(--n-400)' }"
   >
-    <button class="card__main" @click="open = !open" :aria-expanded="open">
-      <span class="card__avatar" :style="{ background: source.color || 'var(--n-400)' }">
-        {{ initials(source.name || item.domain || '?') }}
-      </span>
-
-      <span class="card__body">
-        <span class="card__row">
-          <h3 class="card__title">{{ item.title || 'Nomsiz tender' }}</h3>
-          <span v-if="price" class="card__price mono">{{ price }}</span>
-          <span v-else class="card__price card__price--none">Narx ko'rsatilmagan</span>
+    <div class="card__head">
+      <button class="card__main" @click="open = !open" :aria-expanded="open">
+        <span class="card__avatar" :style="{ background: source.color || 'var(--n-400)' }">
+          {{ initials(source.name || item.domain || '?') }}
         </span>
 
-        <span v-if="extra.company_name" class="card__org">
-          <i class="ti ti-building" />{{ extra.company_name }}
+        <span class="card__body">
+          <span class="card__row">
+            <h3 class="card__title">
+              <span v-if="updated" class="upd" :title="`Manbada o'zgartirilgan: ${formatDateTime(item.updated_at)}`">UPD</span>
+              {{ item.title || 'Nomsiz tender' }}
+            </h3>
+            <span v-if="price" class="card__price mono">{{ price }}</span>
+            <span v-else class="card__price card__price--none">Narx ko'rsatilmagan</span>
+          </span>
+
+          <span v-if="extra.company_name" class="card__org">
+            <i class="ti ti-building" />{{ extra.company_name }}
+          </span>
+
+          <span class="card__meta">
+            <span class="chip chip--src">
+              <i class="ti ti-building-store" />{{ source.name || item.domain }}
+            </span>
+
+            <span v-if="deadline" class="chip" :class="`chip--dl-${deadline.tone}`">
+              <i class="ti ti-hourglass" />{{ deadline.text }}
+            </span>
+
+            <span v-if="status" class="chip" :class="status.tone === 'ok' ? 'chip--ok' : 'chip--muted'">
+              {{ status.text }}
+            </span>
+
+            <span v-if="fresh" class="chip chip--new">
+              <i class="ti ti-flame" />Yangi
+            </span>
+
+            <span v-if="item.category" class="chip chip--cat">{{ categoryLabel(item.category) }}</span>
+
+            <span v-if="score" class="chip chip--score" title="Qidiruv moslik bahosi">
+              <i class="ti ti-target-arrow" />{{ score }}
+            </span>
+
+            <span class="chip chip--time">
+              <i class="ti ti-clock" />{{ relTime }}
+            </span>
+
+            <span class="card__id mono">{{ extra.code || `#${item.external_id || item.id}` }}</span>
+          </span>
         </span>
+      </button>
 
-        <span class="card__meta">
-          <span class="chip chip--src">
-            <i class="ti ti-building-store" />{{ source.name || item.domain }}
-          </span>
+      <!-- Belgilash: PATCH /items/{id}/interest, bazada saqlanadi -->
+      <div class="card__acts">
+        <button
+          class="act act--yes"
+          :class="{ 'act--on': interest === 'interested' }"
+          :disabled="busy"
+          :title="interest === 'interested' ? 'Belgini olib tashlash' : 'Qiziqarli deb belgilash'"
+          :aria-pressed="interest === 'interested'"
+          @click="mark('interested')"
+        >
+          <i class="ti" :class="interest === 'interested' ? 'ti-star-filled' : 'ti-star'" />
+        </button>
 
-          <span v-if="deadline" class="chip" :class="`chip--dl-${deadline.tone}`">
-            <i class="ti ti-hourglass" />{{ deadline.text }}
-          </span>
+        <button
+          class="act act--no"
+          :class="{ 'act--on': interest === 'not_interested' }"
+          :disabled="busy"
+          :title="interest === 'not_interested' ? 'Belgini olib tashlash' : 'Qiziqarsiz deb belgilash'"
+          :aria-pressed="interest === 'not_interested'"
+          @click="mark('not_interested')"
+        >
+          <i class="ti" :class="interest === 'not_interested' ? 'ti-thumb-down-filled' : 'ti-thumb-down'" />
+        </button>
 
-          <span v-if="status" class="chip" :class="status.tone === 'ok' ? 'chip--ok' : 'chip--muted'">
-            {{ status.text }}
-          </span>
-
-          <span v-if="fresh" class="chip chip--new">
-            <i class="ti ti-flame" />Yangi
-          </span>
-
-          <span v-if="item.category" class="chip chip--cat">{{ categoryLabel(item.category) }}</span>
-
-          <span v-if="score" class="chip chip--score" title="Qidiruv moslik bahosi">
-            <i class="ti ti-target-arrow" />{{ score }}
-          </span>
-
-          <span class="chip chip--time">
-            <i class="ti ti-clock" />{{ relTime }}
-          </span>
-
-          <span class="card__id mono">{{ extra.code || `#${item.external_id || item.id}` }}</span>
-        </span>
-      </span>
-
-      <i class="ti ti-chevron-down card__caret" />
-    </button>
+        <button class="act act--caret" @click="open = !open" :aria-expanded="open" aria-label="Tafsilotlar">
+          <i class="ti ti-chevron-down" />
+        </button>
+      </div>
+    </div>
 
     <Transition name="expand" @enter="e => e.style.height = e.scrollHeight + 'px'" @leave="e => e.style.height = '0px'">
       <div v-show="open" class="card__panel">
@@ -174,17 +221,26 @@ const facts = computed(() => [
   border-radius: var(--r-lg);
   overflow: hidden;
   animation: fade-up .4s var(--ease-out) both;
-  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur) var(--ease);
 }
 .card:hover { border-color: var(--border-strong); box-shadow: var(--sh-sm); }
 .card--open { border-color: color-mix(in srgb, var(--src-color) 45%, var(--border)); box-shadow: var(--sh-md); }
+.card--busy { opacity: .6; pointer-events: none; }
+
+/* Belgilangan tenderlar ko'zga darhol tashlanadi */
+.card--i-interested { border-color: color-mix(in srgb, var(--ok-500) 40%, var(--border)); }
+.card--i-not_interested { opacity: .55; }
+.card--i-not_interested:hover { opacity: .8; }
+
+.card__head { display: flex; align-items: stretch; }
 
 .card__main {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  width: 100%;
-  padding: 14px 16px;
+  flex: 1;
+  min-width: 0;
+  padding: 14px 6px 14px 16px;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -221,6 +277,22 @@ const facts = computed(() => [
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* was_updated — manba saytda o'zgartirilgan */
+.upd {
+  display: inline-block;
+  vertical-align: 1px;
+  margin-right: 5px;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
 .card__price {
   font-size: 14px; font-weight: 700;
   color: var(--accent-text);
@@ -260,14 +332,49 @@ const facts = computed(() => [
 
 .card__id { font-size: 10.5px; color: var(--text-3); margin-left: auto; }
 
-.card__caret {
-  font-size: 17px;
-  color: var(--text-3);
+/* ── Belgilash tugmalari ── */
+.card__acts {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px 10px 4px;
   flex-shrink: 0;
-  margin-top: 8px;
-  transition: transform var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.card--open .card__caret { transform: rotate(180deg); color: var(--accent); }
+
+.act {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  font-size: 17px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease);
+}
+.act:hover { background: var(--surface-hover); color: var(--text-2); }
+.act:focus-visible { outline: none; box-shadow: var(--ring); }
+.act:disabled { opacity: .4; cursor: default; }
+
+.act--yes:hover { color: var(--ok-fg); background: var(--ok-bg); }
+.act--yes.act--on {
+  color: var(--ok-fg);
+  background: var(--ok-bg);
+  border-color: color-mix(in srgb, var(--ok-500) 30%, transparent);
+}
+
+.act--no:hover { color: var(--err-fg); background: var(--err-bg); }
+.act--no.act--on {
+  color: var(--err-fg);
+  background: var(--err-bg);
+  border-color: color-mix(in srgb, var(--err-500) 30%, transparent);
+}
+
+.act--caret { font-size: 18px; }
+.card--open .act--caret { color: var(--accent); }
+.card--open .act--caret i { transform: rotate(180deg); }
+.act--caret i { transition: transform var(--dur) var(--ease); }
 
 /* ── Ochiluvchi panel ── */
 .card__panel { overflow: hidden; }
@@ -400,5 +507,7 @@ const facts = computed(() => [
   .card__price { font-size: 13px; }
   .card__inner { padding-left: 16px; }
   .card__id { margin-left: 0; }
+  .card__acts { flex-direction: column; padding: 10px 8px; }
+  .act { width: 30px; height: 30px; font-size: 15px; }
 }
 </style>

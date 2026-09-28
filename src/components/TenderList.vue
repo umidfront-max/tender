@@ -7,9 +7,11 @@ defineProps({
   items:   { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   error:   { type: String, default: null },
-  resolve: { type: Function, required: true }
+  resolve: { type: Function, required: true },
+  // PATCH so'rovi ketayotgan tenderlar id'lari — tugmalar vaqtincha bloklanadi
+  busyIds: { type: Object, default: () => new Set() }
 })
-defineEmits(['retry', 'reset'])
+defineEmits(['retry', 'reset', 'interest'])
 </script>
 
 <template>
@@ -41,6 +43,8 @@ defineEmits(['retry', 'reset'])
       :item="item"
       :source="resolve(item.domain)"
       :index="i"
+      :busy="busyIds.has(item.id)"
+      @interest="(it, val) => $emit('interest', it, val)"
     />
   </TransitionGroup>
 </template>

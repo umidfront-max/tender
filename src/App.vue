@@ -1,32 +1,42 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import StatsBar from '@/components/StatsBar.vue'
 import SearchBar from '@/components/SearchBar.vue'
 import FilterSidebar from '@/components/FilterSidebar.vue'
+import InterestTabs from '@/components/InterestTabs.vue'
 import ResultToolbar from '@/components/ResultToolbar.vue'
 import TenderList from '@/components/TenderList.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import { useTenders } from '@/composables/useTenders'
 import { useSources } from '@/composables/useSources'
 import { useCategories } from '@/composables/useCategories'
+import { useStats } from '@/composables/useStats'
+import { useCollect } from '@/composables/useCollect'
 
 const {
-  filters, sort, page, pageSize,
+  filters, interest, sort, page, pageSize,
   items, total, loading, error,
-  isSearchMode, totalPages, activeFilterCount, stats,
-  load, apply, applyDebounced, goTo, toggleDomain, reset
+  isSearchMode, totalPages, activeFilterCount,
+  load, apply, applyDebounced, goTo, toggleDomain, setInterest, reset
 } = useTenders()
 
 const { sources, loading: sourcesLoading, load: loadSources, resolve } = useSources()
-const { options: categories, collect, seed: seedCategories } = useCategories()
+const { options: categories, collect: collectCategories, seed: seedCategories } = useCategories()
+const { stats, loading: statsLoading, load: loadStats, shift: shiftStats } = useStats()
 
 // API da kategoriyalar endpointi yo'q — qiymatlarni javoblardan yig'amiz
-watch(items, collect)
+watch(items, collectCategories)
 
 const sidebarOpen = ref(false)
-const refreshing = ref(false)
 
+/** Stats faqat manba va kategoriyaga bog'liq — sahifa almashganda qayta so'ralmaydi */
+const statsParams = computed(() => ({
+  domain: filters.domains.length ? filters.domains.join(',') : undefined,
+  category: filters.category || undefined
+}))
+
+watch(statsParams, (p) => loadStats(p), { deep: true })
 watch(pageSize, apply)
 
 // Sidebar ochiq bo'lsa fon scroll qilmasin
@@ -34,10 +44,34 @@ watch(sidebarOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
 
-async function refresh() {
-  refreshing.value = true
-  await Promise.all([loadSources(true), seedCategories(true), load()])
-  refreshing.value = false
+/** Yig'ish tugagach ro'yxat ham, sonlar ham yangilanadi */
+function reloadAll() {
+  load()
+  loadStats(statsParams.value)
+}
+
+const {
+  running: collecting, cooldown, message: collectMessage,
+  start: startCollect, probe: probeCollect
+} = useCollect(reloadAll)
+
+/** PATCH so'rovi ketayotgan tenderlar — tugmalari bloklanadi */
+const busyIds = ref(new Set())
+
+async function onInterest(item, value) {
+  if (busyIds.value.has(item.id)) return
+  busyIds.value = new Set(busyIds.value).add(item.id)
+
+  try {
+    const prev = await setInterest(item, value)
+    shiftStats(prev, value)
+  } catch {
+    // setInterest o'zi eski holatni qaytardi; qo'shimcha xabar shart emas
+  } finally {
+    const next = new Set(busyIds.value)
+    next.delete(item.id)
+    busyIds.value = next
+  }
 }
 
 function onApply() {
@@ -57,16 +91,20 @@ function onToggleDomain(domain) {
 onMounted(() => {
   loadSources()
   seedCategories()
+  loadStats(statsParams.value)
   load()
+  probeCollect()   // boshqa joyda yig'ish ketayotgan bo'lsa ulanib olamiz
 })
 </script>
 
 <template>
   <div class="app">
     <AppHeader
-      :refreshing="refreshing"
+      :collecting="collecting"
+      :cooldown="cooldown"
+      :message="collectMessage"
       :online="!error"
-      @refresh="refresh"
+      @collect="startCollect"
       @toggle-sidebar="sidebarOpen = !sidebarOpen"
     />
 
@@ -93,13 +131,15 @@ onMounted(() => {
             @input-debounced="applyDebounced"
           />
 
-          <StatsBar
-            :stats="stats"
-            :search-mode="isSearchMode"
-            :loading="loading"
-          />
+          <StatsBar :stats="stats" :loading="statsLoading" />
 
           <section class="results">
+            <InterestTabs
+              v-model="interest"
+              :stats="stats"
+              :stats-loading="statsLoading"
+            />
+
             <ResultToolbar
               v-model:sort="sort"
               v-model:page-size="pageSize"
@@ -115,8 +155,10 @@ onMounted(() => {
               :loading="loading"
               :error="error"
               :resolve="resolve"
-              @retry="refresh"
+              :busy-ids="busyIds"
+              @retry="reloadAll"
               @reset="reset"
+              @interest="onInterest"
             />
 
             <PaginationBar
@@ -163,7 +205,7 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.results { display: flex; flex-direction: column; }
+.results { display: flex; flex-direction: column; gap: 16px; }
 
 .foot {
   display: flex;

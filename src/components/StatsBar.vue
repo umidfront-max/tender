@@ -1,45 +1,47 @@
 <script setup>
 import { computed } from 'vue'
-import { formatNumber, formatCompact } from '@/utils/format'
+import { formatNumber } from '@/utils/format'
 
+/**
+ * Ko'rsatkichlar GET /api/v1/items/stats dan keladi — butun baza bo'yicha.
+ * Ilgari joriy sahifa bo'yicha hisoblanardi va sonlar chalg'ituvchi edi.
+ */
 const props = defineProps({
-  stats:      { type: Object, required: true },
-  searchMode: { type: Boolean, default: false },
-  loading:    { type: Boolean, default: false }
+  stats:   { type: Object, required: true },
+  loading: { type: Boolean, default: false }
 })
 
 const cards = computed(() => [
   {
     key: 'total',
-    label: 'Topilgan tenderlar',
+    label: 'Aktiv tenderlar',
     value: formatNumber(props.stats.total),
-    hint: props.searchMode ? "qidiruv bo'yicha" : "filtr bo'yicha",
+    hint: 'muddati tugamaganlar',
     icon: 'ti-files',
     tone: 'blue'
   },
   {
-    key: 'today',
-    label: "Bugun qo'shilgan",
-    value: formatNumber(props.stats.today),
-    hint: 'joriy sahifada',
+    key: 'added',
+    label: 'Oxirgi 24 soatda',
+    value: formatNumber(props.stats.added_24h),
+    hint: "yangi qo'shilgan",
     icon: 'ti-sparkles',
     tone: 'green'
   },
   {
-    key: 'deadline',
-    label: 'Muddati yaqin',
-    value: formatNumber(props.stats.deadlineSoon),
-    hint: '7 kun ichida tugaydi',
+    key: 'ending',
+    label: 'Tugayapti',
+    value: formatNumber(props.stats.ending_soon),
+    hint: `${props.stats.ending_days ?? 3} kun ichida`,
     icon: 'ti-hourglass',
     tone: 'amber'
   },
   {
-    key: 'sum',
-    label: 'Umumiy summa',
-    value: formatCompact(props.stats.sumUzs) ?? '—',
-    // Narx UZS/USD/EUR da keladi — aralashtirmaslik uchun faqat UZS
-    hint: `UZS · ${props.stats.pricedCount} ta narxli`,
-    icon: 'ti-coins',
+    key: 'interested',
+    label: 'Qiziqarli',
+    value: formatNumber(props.stats.interested),
+    hint: 'belgilanganlar',
+    icon: 'ti-star',
     tone: 'violet'
   }
 ])

@@ -12,12 +12,12 @@ export default defineConfig({
   server: {
     // 0.0.0.0 — dev-server tarmoqdagi boshqa qurilmalarga ham ochiq bo'ladi
     host: true,
-    port: 5173,
+    port: 555,
     strictPort: true,
     proxy: {
       // CORS muammosini hal qiladi: /api -> backend
       '/api': {
-        target: 'http://192.168.1.20:8000',
+        target: 'http://192.168.1.10:8000',
         changeOrigin: true
       }
     }

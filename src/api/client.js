@@ -7,10 +7,11 @@
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
 class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, payload) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.payload = payload
   }
 }
 
@@ -27,31 +28,49 @@ function toQuery(params = {}) {
 
 /**
  * @param {string} path
- * @param {object} [params]  query parametrlar
- * @param {AbortSignal} [signal]  so'rovni bekor qilish uchun
+ * @param {object} [options]
+ * @param {object} [options.params]  query parametrlar
+ * @param {'GET'|'POST'|'PATCH'} [options.method]
+ * @param {object} [options.body]    JSON tanasi (POST/PATCH uchun)
+ * @param {AbortSignal} [options.signal]
  */
-export async function request(path, params, signal) {
+export async function request(path, options = {}) {
+  const { params, method = 'GET', body, signal } = options
   const url = BASE + path + toQuery(params)
+
+  const headers = {
+    accept: 'application/json',
+    'Accept-Language': 'uz,en-US;q=0.9,en;q=0.8,ru;q=0.7'
+  }
+  if (body !== undefined) headers['Content-Type'] = 'application/json'
 
   let res
   try {
     res = await fetch(url, {
+      method,
       signal,
-      headers: {
-        accept: 'application/json',
-        'Accept-Language': 'uz,en-US;q=0.9,en;q=0.8,ru;q=0.7'
-      }
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body)
     })
   } catch (err) {
     if (err.name === 'AbortError') throw err
     throw new ApiError('Server bilan aloqa yo\'q', 0)
   }
 
-  if (!res.ok) {
-    throw new ApiError(`So'rov bajarilmadi (${res.status})`, res.status)
+  // Xato javobida ham tanani o'qishga urinamiz — backend sababni yozishi mumkin
+  let payload = null
+  try {
+    payload = await res.json()
+  } catch {
+    payload = null
   }
 
-  return res.json()
+  if (!res.ok) {
+    const detail = typeof payload?.detail === 'string' ? payload.detail : null
+    throw new ApiError(detail || `So'rov bajarilmadi (${res.status})`, res.status, payload)
+  }
+
+  return payload
 }
 
 export { ApiError }

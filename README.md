@@ -16,7 +16,7 @@ Ochiladi: http://localhost:5173
 Dev rejimda `vite.config.js` dagi proxy ishlatiladi — CORS muammosi bo'lmaydi:
 
 ```js
-proxy: { '/api': { target: 'http://192.168.1.20:8000', changeOrigin: true } }
+proxy: { '/api': { target: 'http://192.168.1.10:8000', changeOrigin: true } }
 ```
 
 Manzil o'zgarsa faqat shu qatorni tahrirlang.
@@ -24,7 +24,7 @@ Manzil o'zgarsa faqat shu qatorni tahrirlang.
 Production build uchun `.env` faylida:
 
 ```
-VITE_API_BASE=http://192.168.1.20:8000
+VITE_API_BASE=http://192.168.1.10:8000
 ```
 
 ## Struktura
@@ -38,15 +38,18 @@ src/
 │   ├── useTenders.js      filtrlar, sahifalash, saralash, statistika — asosiy logika
 │   ├── useSources.js      manbalar keshi va rang biriktirish
 │   ├── useCategories.js   kategoriyalarni javoblardan yig'ish
+│   ├── useStats.js        tab sonlari (/items/stats)
+│   ├── useCollect.js      qo'lda yig'ish + holat pollingi
 │   └── useTheme.js        light/dark, localStorage'ga saqlanadi
 ├── components/
-│   ├── AppHeader.vue      logo, live indikator, tema, yangilash
+│   ├── AppHeader.vue      logo, live indikator, tema, qo'lda yig'ish
 │   ├── StatsBar.vue       4 ta ko'rsatkich kartasi
 │   ├── SearchBar.vue      ⌘K fokus, debounce, loading chizig'i
 │   ├── FilterSidebar.vue  manba (ko'p tanlov)/kategoriya/narx/sana filtrlari
 │   ├── ResultToolbar.vue  natija soni, saralash, sahifa hajmi
 │   ├── TenderList.vue     ro'yxat + skeleton + empty/error holatlar
-│   ├── TenderCard.vue     akkordeon karta: muddat, tashkilot, tovarlar, hujjatlar
+│   ├── InterestTabs.vue   4 ta tab, sonlar bilan
+│   ├── TenderCard.vue     akkordeon karta: belgilash, UPD, muddat, hujjatlar
 │   ├── TenderSkeleton.vue shimmer yuklanish holati
 │   ├── EmptyState.vue     bo'sh/xato holatlari
 │   └── PaginationBar.vue  1 … 4 [5] 6 … 20 ko'rinishida
@@ -60,12 +63,16 @@ src/
 
 ## API bilan bog'lanish
 
-Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.20:8000/docs`
+Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.10:8000/docs`
 
 | Endpoint | Qachon | Parametrlar |
 |---|---|---|
-| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, category, domain, price_min, price_max, date_from, date_to, sort, page, page_size` |
+| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, interest, category, domain, price_min, price_max, date_from, date_to, sort, page, page_size` |
+| `GET /api/v1/items/stats` | tab sonlari, filtr o'zgarganda | `domain, category, ending_days` |
+| `PATCH /api/v1/items/{id}/interest` | kartadagi belgilash tugmalari | body: `{"interest": "interested" \| "not_interested" \| "new"}` |
 | `GET /api/v1/sources` | ilova ochilganda bir marta | — |
+| `POST /api/v1/collect` | headerdagi yangilash tugmasi | `source` (ixtiyoriy) |
+| `GET /api/v1/collect/status` | yig'ish ketayotganda har 6 s | `limit` |
 
 Muhim: **alohida `/search` endpointi yo'q**. Ro'yxat ham, qidiruv ham `/api/v1/items`
 orqali ketadi — `q` berilsa 3 tilda (uz lotin, uz kirill, rus) ma'no bo'yicha qidiradi
@@ -75,10 +82,33 @@ va `score` qaytaradi, `q`siz oddiy filtrlanadigan ro'yxat bo'ladi.
 qidiruvda `relevance`, ro'yxatda `newest`.
 
 `domain` bir nechta bo'lishi mumkin — vergul bilan: `xt-xarid.uz,hayotbirja.uz`.
-Qiymatlarni `/api/v1/sources` beradi.
 
 `category` **aynan** mos kelishi kerak va ro'yxati uchun alohida endpoint yo'q,
 shuning uchun qiymatlar javoblardan yig'iladi (`useCategories`).
+
+### Tablar va belgilash
+
+4 ta tab `interest` filtriga to'g'ri keladi: `all` / `new` / `interested` / `not_interested`.
+Sonlarni front hisoblamaydi — `GET /items/stats` beradi, ya'ni butun baza bo'yicha,
+joriy sahifa bo'yicha emas.
+
+Belgilash `PATCH` orqali bazaga yoziladi, shuning uchun sahifa yangilansa ham,
+boshqa kompyuterda ochilsa ham holat saqlanib qoladi. Interfeysda optimistik ishlaydi:
+avval ekranda o'zgaradi, server rad etsa orqaga qaytariladi. Tugmani qayta bosish
+belgini olib tashlaydi (API da bu `new`).
+
+Joriy tab bilan mos kelmay qolgan tender ro'yxatdan darhol chiqib ketadi —
+masalan «Yangi» tabida turib tenderni qiziqarli deb belgilasangiz.
+
+### Qo'lda yangilash
+
+Headerdagi tugma `POST /api/v1/collect` ni chaqiradi, keyin `GET /collect/status`
+har 6 soniyada so'raladi. `running: false` bo'lgach ro'yxat va sonlar yangilanadi.
+Backend `cooldown` qaytarsa tugma `retry_after_seconds` davomida bloklanadi va
+qolgan vaqt tugmaning o'zida sanab turadi.
+
+Ilova ochilganda holat bir marta tekshiriladi — boshqa brauzerda boshlangan
+yig'ish ketayotgan bo'lsa, kuzatuvga o'zi ulanadi.
 
 Har bir yangi so'rov oldingisini `AbortController` orqali bekor qiladi — tez yozganda eski javob kelib qolmaydi.
 
@@ -96,11 +126,17 @@ Kartada shular ko'rsatiladi:
 | `categories` | teglar |
 | `files` | yuklab olinadigan hujjatlar ro'yxati (nomi, hajmi, kengaytmasi) |
 
+`was_updated: true` bo'lsa kartada **UPD** belgisi chiqadi — manba saytda tender
+o'zgartirilgan degani; o'zgarish vaqti `updated_at` da.
+
+Muddati tugagan tenderlarni API umuman qaytarmaydi (arxiv jadvalga o'tadi),
+shuning uchun frontda alohida filtr kerak emas.
+
 `detail` ba'zi saytlarda (`tbcbank.uz`) HTML formatda keladi — `utils/html.js`
 oq ro'yxat bo'yicha tozalab, keyin chiqaradi.
 
-Narx UZS, USD yoki EUR da bo'lishi mumkin, shuning uchun «Umumiy summa»
-ko'rsatkichi faqat UZS elementlar bo'yicha hisoblanadi.
+Narx UZS, USD yoki EUR da bo'lishi mumkin — shuning uchun narx bo'yicha
+umumiy summa ko'rsatilmaydi, ko'rsatkichlar `/items/stats` dan olinadi.
 
 ## Xususiyatlar
 
