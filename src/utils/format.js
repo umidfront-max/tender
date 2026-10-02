@@ -135,3 +135,24 @@ export function formatScore(score) {
   if (!Number.isFinite(v)) return null
   return `${(v * 100).toFixed(1)}%`
 }
+
+/**
+ * "2026-09-29" -> "29.09.2026"
+ *
+ * Ataylab `new Date()` ishlatilmaydi: faqat sanadan iborat satrni brauzer UTC
+ * deb o'qiydi va mahalliy vaqt zonasida bir kun oldinga/orqaga siljib ketishi mumkin.
+ */
+export function formatIsoDate(iso) {
+  if (!iso) return '—'
+  const m = String(iso).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : String(iso)
+}
+
+/** Oxirgi 24 soat ichidami? (to'liq vaqt belgisi uchun — first_seen_at) */
+export function isWithin24h(iso) {
+  if (!iso) return false
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return false
+  const diff = Date.now() - d.getTime()
+  return diff >= 0 && diff <= 86400000
+}

@@ -1,5 +1,6 @@
 <script setup>
 import { initials } from '@/utils/format'
+import NumberField from './NumberField.vue'
 
 const filters = defineModel('filters', { type: Object, required: true })
 
@@ -86,9 +87,9 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain'])
         <section class="grp">
           <h3 class="grp__title">Narx oralig'i</h3>
           <div class="pair">
-            <input v-model="filters.priceMin" class="field" type="number" min="0" placeholder="dan" />
+            <NumberField v-model="filters.priceMin" placeholder="dan" />
             <span class="pair__sep">—</span>
-            <input v-model="filters.priceMax" class="field" type="number" min="0" placeholder="gacha" />
+            <NumberField v-model="filters.priceMax" placeholder="gacha" />
           </div>
           <p class="grp__note">Narx valyutasi manbaga qarab UZS, USD yoki EUR bo'ladi</p>
         </section>

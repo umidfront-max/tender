@@ -13,6 +13,14 @@ const props = defineProps({
 })
 const emit = defineEmits(['collect', 'toggle-sidebar'])
 
+/** Faol bo'lim: tenders | laws */
+const view = defineModel({ type: String, default: 'tenders' })
+
+const VIEWS = [
+  { value: 'tenders', label: 'Tenderlar', icon: 'ti-file-certificate' },
+  { value: 'laws',    label: 'Qonunlar',  icon: 'ti-gavel' }
+]
+
 const { theme, toggle } = useTheme()
 
 const collectTitle = computed(() => {
@@ -37,6 +45,19 @@ const collectTitle = computed(() => {
         <span class="brand__sub">Yagona tenderlar monitoringi</span>
       </span>
     </a>
+
+    <nav class="nav">
+      <button
+        v-for="v in VIEWS"
+        :key="v.value"
+        class="nav__btn"
+        :class="{ 'nav__btn--on': view === v.value }"
+        @click="view = v.value"
+      >
+        <i class="ti" :class="v.icon" />
+        <span>{{ v.label }}</span>
+      </button>
+    </nav>
 
     <div class="hdr__right">
       <Transition name="fade">
@@ -130,6 +151,42 @@ const collectTitle = computed(() => {
 
 .hdr__right { display: flex; align-items: center; gap: 8px; }
 
+/* Bo'limlar: Tenderlar / Qonunlar */
+.nav {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  margin-right: 12px;
+  background: var(--surface-sunk);
+  border-radius: var(--r-full);
+}
+.nav__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 13px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-full);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.nav__btn i { font-size: 15px; }
+.nav__btn:hover { color: var(--text); }
+.nav__btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.nav__btn--on {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--sh-xs);
+}
+
 /* Live indikator */
 .pulse {
   display: inline-flex; align-items: center; gap: 8px;
@@ -152,6 +209,12 @@ const collectTitle = computed(() => {
 .is-spinning { animation: spin .8s linear infinite; display: inline-block; }
 
 .btn:disabled { opacity: .5; cursor: default; }
+
+@media (max-width: 760px) {
+  .nav__btn span { display: none; }
+  .nav__btn { padding: 0 10px; }
+  .nav { margin-right: 6px; }
+}
 
 @media (max-width: 900px) {
   .hdr { padding: 0 14px; }

@@ -2,7 +2,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const model = defineModel({ type: String, default: '' })
-defineProps({ loading: { type: Boolean, default: false } })
+defineProps({
+  loading:     { type: Boolean, default: false },
+  placeholder: { type: String, default: "Tender nomi, tashkilot yoki kalit so'z bo'yicha qidiring…" },
+  label:       { type: String, default: 'Tenderlarni qidirish' }
+})
 const emit = defineEmits(['search', 'input-debounced'])
 
 const inputEl = ref(null)
@@ -39,8 +43,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       v-model="model"
       class="search__input"
       type="search"
-      placeholder="Tender nomi, tashkilot yoki kalit so'z bo'yicha qidiring…"
-      aria-label="Tenderlarni qidirish"
+      :placeholder="placeholder"
+      :aria-label="label"
       @input="onInput"
       @keydown.enter="emit('search')"
     />

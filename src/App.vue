@@ -8,11 +8,13 @@ import InterestTabs from '@/components/InterestTabs.vue'
 import ResultToolbar from '@/components/ResultToolbar.vue'
 import TenderList from '@/components/TenderList.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
+import LawsView from '@/components/LawsView.vue'
 import { useTenders } from '@/composables/useTenders'
 import { useSources } from '@/composables/useSources'
 import { useCategories } from '@/composables/useCategories'
 import { useStats } from '@/composables/useStats'
 import { useCollect } from '@/composables/useCollect'
+import { useLaws } from '@/composables/useLaws'
 
 const {
   filters, interest, sort, page, pageSize,
@@ -30,6 +32,22 @@ watch(items, collectCategories)
 
 const sidebarOpen = ref(false)
 
+/** Faol bo'lim: tenders | laws */
+const view = ref('tenders')
+
+const {
+  filters: lawFilters, page: lawPage, pageSize: lawPageSize,
+  items: lawItems, total: lawTotal, totalPages: lawTotalPages,
+  loading: lawsLoading, error: lawsError, loaded: lawsLoaded,
+  load: loadLaws, apply: applyLaws, applyDebounced: applyLawsDebounced,
+  goTo: goToLaw, reset: resetLaws
+} = useLaws()
+
+// Qonunlar birinchi marta ochilgandagina yuklanadi
+watch(view, (v) => {
+  if (v === 'laws' && !lawsLoaded.value) loadLaws()
+})
+
 /** Stats faqat manba va kategoriyaga bog'liq — sahifa almashganda qayta so'ralmaydi */
 const statsParams = computed(() => ({
   domain: filters.domains.length ? filters.domains.join(',') : undefined,
@@ -44,10 +62,14 @@ watch(sidebarOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
 
-/** Yig'ish tugagach ro'yxat ham, sonlar ham yangilanadi */
+/**
+ * Yig'ish tugagach hamma narsa yangilanadi.
+ * POST /collect qonunlarni ham birga yig'adi, shuning uchun ular ham qayta so'raladi.
+ */
 function reloadAll() {
   load()
   loadStats(statsParams.value)
+  if (lawsLoaded.value) loadLaws()
 }
 
 const {
@@ -100,6 +122,7 @@ onMounted(() => {
 <template>
   <div class="app">
     <AppHeader
+      v-model="view"
       :collecting="collecting"
       :cooldown="cooldown"
       :message="collectMessage"
@@ -108,8 +131,9 @@ onMounted(() => {
       @toggle-sidebar="sidebarOpen = !sidebarOpen"
     />
 
-    <div class="shell">
+    <div class="shell" :class="{ 'shell--wide': view === 'laws' }">
       <FilterSidebar
+        v-show="view === 'tenders'"
         v-model:filters="filters"
         :sources="sources"
         :sources-loading="sourcesLoading"
@@ -123,7 +147,25 @@ onMounted(() => {
       />
 
       <main class="main">
-        <div class="main__inner">
+        <div v-if="view === 'laws'" class="main__inner">
+          <LawsView
+            :items="lawItems"
+            :total="lawTotal"
+            :page="lawPage"
+            :page-size="lawPageSize"
+            :total-pages="lawTotalPages"
+            :loading="lawsLoading"
+            :error="lawsError"
+            :filters="lawFilters"
+            @search="applyLaws"
+            @search-debounced="applyLawsDebounced"
+            @apply="applyLaws"
+            @reset="resetLaws"
+            @go="goToLaw"
+          />
+        </div>
+
+        <div v-else class="main__inner">
           <SearchBar
             v-model="filters.q"
             :loading="loading"
@@ -191,6 +233,9 @@ onMounted(() => {
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   align-items: start;
 }
+
+/* Qonunlar bo'limida sidebar yo'q — butun kenglik ro'yxatga beriladi */
+.shell--wide { grid-template-columns: minmax(0, 1fr); }
 
 .main { min-width: 0; display: flex; flex-direction: column; min-height: calc(100vh - var(--header-h)); }
 

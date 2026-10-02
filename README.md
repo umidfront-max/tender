@@ -33,13 +33,15 @@ VITE_API_BASE=http://192.168.1.10:8000
 src/
 ├── api/
 │   ├── client.js          fetch ustidagi qatlam — query builder, AbortSignal, xatolar
-│   └── tenders.js         /items, /sources, /health endpointlari
+│   ├── tenders.js         /items, /stats, /interest, /collect, /sources
+│   └── laws.js            /laws
 ├── composables/
 │   ├── useTenders.js      filtrlar, sahifalash, saralash, statistika — asosiy logika
 │   ├── useSources.js      manbalar keshi va rang biriktirish
 │   ├── useCategories.js   kategoriyalarni javoblardan yig'ish
 │   ├── useStats.js        tab sonlari (/items/stats)
 │   ├── useCollect.js      qo'lda yig'ish + holat pollingi
+│   ├── useLaws.js         qonunlar ro'yxati va filtrlari
 │   └── useTheme.js        light/dark, localStorage'ga saqlanadi
 ├── components/
 │   ├── AppHeader.vue      logo, live indikator, tema, qo'lda yig'ish
@@ -49,6 +51,9 @@ src/
 │   ├── ResultToolbar.vue  natija soni, saralash, sahifa hajmi
 │   ├── TenderList.vue     ro'yxat + skeleton + empty/error holatlar
 │   ├── InterestTabs.vue   4 ta tab, sonlar bilan
+│   ├── LawsView.vue       qonunlar bo'limi: qidiruv, sana, ro'yxat
+│   ├── LawCard.vue        hujjat kartasi, lex.uz va PDF havolalari
+│   ├── NumberField.vue    "1 000 000" ko'rinishida raqam kiritish
 │   ├── TenderCard.vue     akkordeon karta: belgilash, UPD, muddat, hujjatlar
 │   ├── TenderSkeleton.vue shimmer yuklanish holati
 │   ├── EmptyState.vue     bo'sh/xato holatlari
@@ -71,6 +76,7 @@ Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.10:8000/docs`
 | `GET /api/v1/items/stats` | tab sonlari, filtr o'zgarganda | `domain, category, ending_days` |
 | `PATCH /api/v1/items/{id}/interest` | kartadagi belgilash tugmalari | body: `{"interest": "interested" \| "not_interested" \| "new"}` |
 | `GET /api/v1/sources` | ilova ochilganda bir marta | — |
+| `GET /api/v1/laws` | Qonunlar bo'limi | `q, date_from, date_to, page, page_size` |
 | `POST /api/v1/collect` | headerdagi yangilash tugmasi | `source` (ixtiyoriy) |
 | `GET /api/v1/collect/status` | yig'ish ketayotganda har 6 s | `limit` |
 
@@ -100,12 +106,33 @@ belgini olib tashlaydi (API da bu `new`).
 Joriy tab bilan mos kelmay qolgan tender ro'yxatdan darhol chiqib ketadi —
 masalan «Yangi» tabida turib tenderni qiziqarli deb belgilasangiz.
 
+### Qonunlar bo'limi
+
+Headerdagi **Tenderlar / Qonunlar** tugmalari bo'limni almashtiradi. Vue Router
+qo'shilmadi — ilova bitta ekrandan iborat, shuning uchun oddiy `view` holati yetarli.
+Qonunlar ro'yxati birinchi marta ochilgandagina yuklanadi.
+
+`GET /api/v1/laws` doim yangi → eski tartibda qaytaradi, saralash parametri yo'q.
+Filtrlar: matn qidiruvi va hujjat sanasi oralig'i. Sidebar bu bo'limda ko'rsatilmaydi.
+
+Karta bosilganda hujjat lex.uz'da yangi tabda ochiladi, o'ng chetdagi tugma esa PDF ni.
+
+**Sana bilan ehtiyot bo'lish kerak:** `published_at` vaqtsiz sana (`2026-09-29`).
+`new Date('2026-09-29')` ni brauzer UTD deb o'qiydi va manfiy vaqt zonalarida
+sana bir kun orqaga siljiydi. Shuning uchun `formatIsoDate()` satrni to'g'ridan-to'g'ri
+qayta tartiblaydi: `29.09.2026`. `first_seen_at` esa to'liq vaqt belgisi, u bilan
+`Date` ishlatish xavfsiz — **YANGI** badge o'sha oxirgi 24 soat bo'yicha chiqadi.
+
 ### Qo'lda yangilash
 
 Headerdagi tugma `POST /api/v1/collect` ni chaqiradi, keyin `GET /collect/status`
 har 6 soniyada so'raladi. `running: false` bo'lgach ro'yxat va sonlar yangilanadi.
 Backend `cooldown` qaytarsa tugma `retry_after_seconds` davomida bloklanadi va
 qolgan vaqt tugmaning o'zida sanab turadi.
+
+`POST /collect` tenderlar bilan birga qonunlarni ham yig'adi, shuning uchun
+yig'ish tugagach qonunlar ro'yxati ham (agar ochilgan bo'lsa) yangilanadi.
+Faqat qonunlar kerak bo'lsa: `POST /api/v1/collect?source=lex.uz`.
 
 Ilova ochilganda holat bir marta tekshiriladi — boshqa brauzerda boshlangan
 yig'ish ketayotgan bo'lsa, kuzatuvga o'zi ulanadi.

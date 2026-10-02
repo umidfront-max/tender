@@ -125,25 +125,27 @@ function mark(value) {
       <!-- Belgilash: PATCH /items/{id}/interest, bazada saqlanadi -->
       <div class="card__acts">
         <button
-          class="act act--yes"
-          :class="{ 'act--on': interest === 'interested' }"
+          class="mk mk--yes"
+          :class="{ 'mk--on': interest === 'interested' }"
           :disabled="busy"
-          :title="interest === 'interested' ? 'Belgini olib tashlash' : 'Qiziqarli deb belgilash'"
+          :title="interest === 'interested' ? 'Belgini olib tashlash' : 'Bizga qiziq deb belgilash'"
           :aria-pressed="interest === 'interested'"
           @click="mark('interested')"
         >
-          <i class="ti" :class="interest === 'interested' ? 'ti-star-filled' : 'ti-star'" />
+          <i class="ti ti-check" />
+          <span>Bizga qiziq</span>
         </button>
 
         <button
-          class="act act--no"
-          :class="{ 'act--on': interest === 'not_interested' }"
+          class="mk mk--no"
+          :class="{ 'mk--on': interest === 'not_interested' }"
           :disabled="busy"
-          :title="interest === 'not_interested' ? 'Belgini olib tashlash' : 'Qiziqarsiz deb belgilash'"
+          :title="interest === 'not_interested' ? 'Belgini olib tashlash' : 'Qiziq emas deb belgilash'"
           :aria-pressed="interest === 'not_interested'"
           @click="mark('not_interested')"
         >
-          <i class="ti" :class="interest === 'not_interested' ? 'ti-thumb-down-filled' : 'ti-thumb-down'" />
+          <i class="ti ti-x" />
+          <span>Qiziq emas</span>
         </button>
 
         <button class="act act--caret" @click="open = !open" :aria-expanded="open" aria-label="Tafsilotlar">
@@ -232,13 +234,13 @@ function mark(value) {
 .card--i-not_interested { opacity: .55; }
 .card--i-not_interested:hover { opacity: .8; }
 
-.card__head { display: flex; align-items: stretch; }
+.card__head { display: flex; align-items: flex-start; flex-wrap: wrap; }
 
 .card__main {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  flex: 1;
+  flex: 1 1 340px;
   min-width: 0;
   padding: 14px 6px 14px 16px;
   background: transparent;
@@ -336,9 +338,55 @@ function mark(value) {
 .card__acts {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 10px 12px 10px 4px;
+  gap: 6px;
+  padding: 12px 12px 12px 4px;
   flex-shrink: 0;
+}
+
+.mk {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-full);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease);
+}
+.mk i { font-size: 15px; }
+.mk:focus-visible { outline: none; box-shadow: var(--ring); }
+.mk:disabled { opacity: .4; cursor: default; }
+
+.mk--yes:hover:not(:disabled) {
+  color: var(--ok-fg);
+  border-color: color-mix(in srgb, var(--ok-500) 45%, transparent);
+  background: var(--ok-bg);
+}
+.mk--yes.mk--on {
+  color: var(--ok-fg);
+  background: var(--ok-bg);
+  border-color: color-mix(in srgb, var(--ok-500) 45%, transparent);
+  font-weight: 600;
+}
+
+.mk--no:hover:not(:disabled) {
+  color: var(--err-fg);
+  border-color: color-mix(in srgb, var(--err-500) 45%, transparent);
+  background: var(--err-bg);
+}
+.mk--no.mk--on {
+  color: var(--err-fg);
+  background: var(--err-bg);
+  border-color: color-mix(in srgb, var(--err-500) 45%, transparent);
+  font-weight: 600;
 }
 
 .act {
@@ -356,20 +404,6 @@ function mark(value) {
 .act:hover { background: var(--surface-hover); color: var(--text-2); }
 .act:focus-visible { outline: none; box-shadow: var(--ring); }
 .act:disabled { opacity: .4; cursor: default; }
-
-.act--yes:hover { color: var(--ok-fg); background: var(--ok-bg); }
-.act--yes.act--on {
-  color: var(--ok-fg);
-  background: var(--ok-bg);
-  border-color: color-mix(in srgb, var(--ok-500) 30%, transparent);
-}
-
-.act--no:hover { color: var(--err-fg); background: var(--err-bg); }
-.act--no.act--on {
-  color: var(--err-fg);
-  background: var(--err-bg);
-  border-color: color-mix(in srgb, var(--err-500) 30%, transparent);
-}
 
 .act--caret { font-size: 18px; }
 .card--open .act--caret { color: var(--accent); }
@@ -507,7 +541,12 @@ function mark(value) {
   .card__price { font-size: 13px; }
   .card__inner { padding-left: 16px; }
   .card__id { margin-left: 0; }
-  .card__acts { flex-direction: column; padding: 10px 8px; }
-  .act { width: 30px; height: 30px; font-size: 15px; }
+  /* Tor ekranda tugmalar karta ostiga to'liq kenglikda tushadi */
+  .card__acts {
+    width: 100%;
+    padding: 0 16px 14px 16px;
+  }
+  .card__acts .act--caret { margin-left: auto; }
+  .mk { flex: 1; justify-content: center; }
 }
 </style>
