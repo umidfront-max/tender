@@ -72,10 +72,10 @@ Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.10:8000/docs`
 
 | Endpoint | Qachon | Parametrlar |
 |---|---|---|
-| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, interest, category, domain, price_min, price_max, date_from, date_to, sort, page, page_size` |
+| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, interest, category, domain, sector, buyer_type, company_tin, price_min, price_max, date_from, date_to, sort, page, page_size` |
 | `GET /api/v1/items/stats` | tab sonlari, filtr o'zgarganda | `domain, category, ending_days` |
 | `PATCH /api/v1/items/{id}/interest` | kartadagi belgilash tugmalari | body: `{"interest": "interested" \| "not_interested" \| "new"}` |
-| `GET /api/v1/sources` | ilova ochilganda bir marta | — |
+| `GET /api/v1/sources` | ilova ochilganda bir marta | `kind` (standart `tender`), `sector` |
 | `GET /api/v1/laws` | Qonunlar bo'limi | `q, date_from, date_to, page, page_size` |
 | `POST /api/v1/collect` | headerdagi yangilash tugmasi | `source` (ixtiyoriy) |
 | `GET /api/v1/collect/status` | yig'ish ketayotganda har 6 s | `limit` |
@@ -88,6 +88,21 @@ va `score` qaytaradi, `q`siz oddiy filtrlanadigan ro'yxat bo'ladi.
 qidiruvda `relevance`, ro'yxatda `newest`.
 
 `domain` bir nechta bo'lishi mumkin — vergul bilan: `xt-xarid.uz,hayotbirja.uz`.
+
+`sector` (`government` / `bank`) va `buyer_type` (`budget` / `corporate`) sidebarda
+segment tanlagich, `company_tin` esa alohida maydon — boshidan mos kelishi yetarli.
+
+Qidiruv maydoniga **faqat raqam** kiritilsa backend uni STIR yoki tender kodi deb
+aniq qidiradi, ma'no bo'yicha emas. Shuning uchun alohida `ident` parametri kerak emas.
+
+### Manbalar guruhi
+
+`/api/v1/sources` har bir manbada `parent` qaytaradi. `parent` bir xil bo'lganlar
+sidebarda bitta guruh ostida ko'rsatiladi — hozirda **UZEX** ostida 3 ta bo'lim bor.
+Guruh qatorini bosish uchalasini birga yoqadi/o'chiradi, ichki qatorlar esa alohida
+tanlanadi; qisman tanlangan guruhda chiziqcha belgisi chiqadi.
+
+`kind` standart qiymati `tender`, shuning uchun `lex.uz` bu ro'yxatga tushmaydi.
 
 `category` **aynan** mos kelishi kerak va ro'yxati uchun alohida endpoint yo'q,
 shuning uchun qiymatlar javoblardan yig'iladi (`useCategories`).
@@ -120,8 +135,10 @@ Karta bosilganda hujjat lex.uz'da yangi tabda ochiladi, o'ng chetdagi tugma esa 
 **Sana bilan ehtiyot bo'lish kerak:** `published_at` vaqtsiz sana (`2026-09-29`).
 `new Date('2026-09-29')` ni brauzer UTD deb o'qiydi va manfiy vaqt zonalarida
 sana bir kun orqaga siljiydi. Shuning uchun `formatIsoDate()` satrni to'g'ridan-to'g'ri
-qayta tartiblaydi: `29.09.2026`. `first_seen_at` esa to'liq vaqt belgisi, u bilan
-`Date` ishlatish xavfsiz — **YANGI** badge o'sha oxirgi 24 soat bo'yicha chiqadi.
+qayta tartiblaydi: `29.09.2026`. **YANGI** badge serverning `is_new` maydoni bo'yicha chiqadi (24 soatdan keyin
+o'zi o'chadi). Ilgari u frontda `first_seen_at` dan hisoblanardi, lekin yig'ish
+bu maydonni qayta yozgani uchun har yangilanishdan keyin hamma hujjat "yangi"
+bo'lib qolardi.
 
 ### Qo'lda yangilash
 
@@ -152,6 +169,17 @@ Kartada shular ko'rsatiladi:
 | `goods`, `goods_count`, `lots_count` | «Tovarlar va xizmatlar» bloki |
 | `categories` | teglar |
 | `files` | yuklab olinadigan hujjatlar ro'yxati (nomi, hajmi, kengaytmasi) |
+
+### Sana va narx
+
+Backend sanalarni UTC da beradi. Formatlash **brauzer vaqt zonasida emas**,
+`Asia/Tashkent` ga qadab qo'yilgan (`utils/format.js` dagi `TZ`) — aks holda
+chet eldan ochilganda yoki soati noto'g'ri sozlangan kompyuterda sana siljiydi.
+Muddat badge'idagi "necha kun qoldi" ham soatlar farqi emas, Toshkent kalendari
+kunlari farqi bo'yicha hisoblanadi.
+
+Narxlar API dan to'liq son bo'lib keladi (`102607054.00`), ajratkichlarni front
+qo'yadi: `102 607 054 UZS`. Qisqa ko'rinish kerak bo'lsa `formatPriceCompact()`.
 
 `was_updated: true` bo'lsa kartada **UPD** belgisi chiqadi — manba saytda tender
 o'zgartirilgan degani; o'zgarish vaqti `updated_at` da.

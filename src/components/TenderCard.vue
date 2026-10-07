@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import {
   formatPrice, formatNumber, formatDate, formatDateTime, formatRelative,
   formatFileSize, formatScore, initials, isToday,
-  deadlineInfo, statusLabel, categoryLabel
+  deadlineInfo, statusLabel, categoryLabel, buyerTypeLabel
 } from '@/utils/format'
 import { looksLikeHtml, sanitizeHtml, stripHtml } from '@/utils/html'
 
@@ -27,6 +27,7 @@ const relTime  = computed(() => formatRelative(props.item.published_at || props.
 const deadline = computed(() => deadlineInfo(extra.value.deadline))
 const status   = computed(() => statusLabel(extra.value.status))
 const score    = computed(() => formatScore(props.item.score))
+const buyerType = computed(() => buyerTypeLabel(extra.value.buyer_type))
 
 /** Xodim belgisi: new | interested | not_interested */
 const interest = computed(() => props.item.interest ?? 'new')
@@ -48,6 +49,7 @@ const facts = computed(() => [
   extra.value.company_name && { label: 'Buyurtmachi',       value: extra.value.company_name, icon: 'ti-building' },
   extra.value.company_tin  && { label: 'STIR / INN',        value: extra.value.company_tin,  icon: 'ti-id', mono: true },
   extra.value.region       && { label: 'Hudud',             value: extra.value.region,       icon: 'ti-map-pin' },
+  buyerType.value          && { label: 'Buyurtmachi turi',  value: buyerType.value,          icon: 'ti-wallet' },
   extra.value.deadline     && { label: 'Takliflar muddati', value: formatDateTime(extra.value.deadline), icon: 'ti-hourglass' },
   { label: 'E\'lon sanasi', value: formatDate(props.item.published_at), icon: 'ti-calendar-event' },
   updated.value            && { label: 'O\'zgartirilgan',   value: formatDateTime(props.item.updated_at), icon: 'ti-pencil' },
@@ -107,7 +109,11 @@ function mark(value) {
               <i class="ti ti-flame" />Yangi
             </span>
 
-            <span v-if="item.category" class="chip chip--cat">{{ categoryLabel(item.category) }}</span>
+            <span v-if="buyerType" class="chip chip--buyer">
+            <i class="ti ti-wallet" />{{ buyerType }}
+          </span>
+
+          <span v-if="item.category" class="chip chip--cat">{{ categoryLabel(item.category) }}</span>
 
             <span v-if="score" class="chip chip--score" title="Qidiruv moslik bahosi">
               <i class="ti ti-target-arrow" />{{ score }}
@@ -323,6 +329,7 @@ function mark(value) {
 .chip--cat   { background: var(--accent-bg); color: var(--accent-text); }
 .chip--ok    { background: var(--ok-bg); color: var(--ok-fg); }
 .chip--muted { background: var(--surface-sunk); color: var(--text-3); }
+.chip--buyer { background: var(--surface-sunk); color: var(--text-2); }
 .chip--score { background: color-mix(in srgb, var(--violet-500) 12%, transparent); color: color-mix(in srgb, var(--violet-500) 72%, var(--text)); }
 .chip--time  { background: transparent; color: var(--text-3); padding-left: 0; }
 

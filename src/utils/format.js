@@ -1,4 +1,22 @@
+/**
+ * Backend sanalarni UTC da beradi. Formatlash brauzer vaqt zonasida emas,
+ * aniq Toshkent vaqtida bo'lishi kerak — aks holda chet eldan ochilganda
+ * yoki noto'g'ri sozlangan kompyuterda sana siljib ko'rinadi.
+ */
+const TZ = 'Asia/Tashkent'
+
 const nf = new Intl.NumberFormat('uz-UZ')
+
+/** Sanani Toshkent vaqtida "2026-10-07" ko'rinishiga keltiradi */
+const dayFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+})
+
+/** Toshkent kalendaridagi kun raqami — kunlar farqini to'g'ri hisoblash uchun */
+function dayIndex(date) {
+  const [y, m, d] = dayFmt.format(date).split('-').map(Number)
+  return Date.UTC(y, m - 1, d) / 86400000
+}
 
 /** 1234567 -> "1 234 567" */
 export function formatNumber(n) {
@@ -18,14 +36,24 @@ export function formatCompact(n) {
   return nf.format(Math.round(v))
 }
 
-/** Narx + valyuta */
+/**
+ * Narx + valyuta. Backend to'liq son beradi ("102607054.00"),
+ * ajratkichlarni front qo'yadi: "102 607 054 UZS".
+ */
 export function formatPrice(price, currency = 'UZS') {
+  const v = Number(price)
+  if (!Number.isFinite(v) || v <= 0) return null
+  return `${nf.format(Math.round(v))} ${currency}`
+}
+
+/** Qisqa ko'rinish ("1.11 mlrd UZS") — joy tor bo'lgan yerlar uchun */
+export function formatPriceCompact(price, currency = 'UZS') {
   const compact = formatCompact(price)
   return compact ? `${compact} ${currency}` : null
 }
 
 const dtf = new Intl.DateTimeFormat('uz-UZ', {
-  day: '2-digit', month: 'short', year: 'numeric'
+  timeZone: TZ, day: '2-digit', month: 'short', year: 'numeric'
 })
 
 export function formatDate(iso) {
@@ -56,14 +84,12 @@ export function formatRelative(iso) {
   return `${Math.round(diffMo / 12)} yil oldin`
 }
 
-/** Bugungi kunmi? */
+/** Toshkent vaqti bo'yicha bugungi kunmi? */
 export function isToday(iso) {
   if (!iso) return false
   const d = new Date(iso)
-  const now = new Date()
-  return d.getDate() === now.getDate() &&
-         d.getMonth() === now.getMonth() &&
-         d.getFullYear() === now.getFullYear()
+  if (Number.isNaN(d.getTime())) return false
+  return dayIndex(d) === dayIndex(new Date())
 }
 
 /** Manba nomidan initsial: "UZEX E-Tender" -> "UE" */
@@ -78,6 +104,7 @@ export function initials(name = '') {
 }
 
 const dttf = new Intl.DateTimeFormat('uz-UZ', {
+  timeZone: TZ,
   day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
 })
 
@@ -97,7 +124,9 @@ export function deadlineInfo(iso) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
 
-  const days = Math.ceil((d.getTime() - Date.now()) / 86400000)
+  // Kalendar kunlari farqi (Toshkent bo'yicha) — soatlar farqi emas,
+  // aks holda "bugun tugaydi" va "ertaga" chegarasi siljib ketadi
+  const days = dayIndex(d) - dayIndex(new Date())
 
   if (days < 0)  return { days, tone: 'over',   text: 'Muddati tugagan' }
   if (days === 0) return { days, tone: 'urgent', text: 'Bugun tugaydi' }
@@ -155,4 +184,11 @@ export function isWithin24h(iso) {
   if (Number.isNaN(d.getTime())) return false
   const diff = Date.now() - d.getTime()
   return diff >= 0 && diff <= 86400000
+}
+
+/** extra.buyer_type — buyurtmachi turi */
+export function buyerTypeLabel(value) {
+  if (value === 'budget') return 'Budjet'
+  if (value === 'corporate') return 'Korporativ'
+  return null
 }

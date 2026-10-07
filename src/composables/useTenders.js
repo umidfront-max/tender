@@ -5,11 +5,28 @@ export const DEFAULT_FILTERS = Object.freeze({
   q: '',
   category: '',
   domains: [],      // bir nechta manba: API ga vergul bilan uzatiladi
+  sector: '',       // government | bank
+  buyerType: '',    // budget | corporate
+  companyTin: '',   // INN/STIR, boshidan mos kelishi yetarli
   priceMin: '',
   priceMax: '',
   dateFrom: '',
   dateTo: ''
 })
+
+/** Provider toifasi (sector) */
+export const SECTORS = Object.freeze([
+  { value: '',           label: 'Barchasi' },
+  { value: 'government', label: 'Davlat' },
+  { value: 'bank',       label: 'Bank' }
+])
+
+/** Buyurtmachi turi (extra.buyer_type) */
+export const BUYER_TYPES = Object.freeze([
+  { value: '',          label: 'Barchasi' },
+  { value: 'budget',    label: 'Budjet' },
+  { value: 'corporate', label: 'Korporativ' }
+])
 
 /**
  * API qabul qiladigan tartiblash qiymatlari (SortOrder).
@@ -50,10 +67,15 @@ export function useTenders() {
   const isSearchMode = computed(() => filters.q.trim().length > 0)
   const totalPages   = computed(() => Math.max(1, pages.value))
 
-  /** Faol filtrlar soni — sidebar badge uchun (q hisobga olinmaydi) */
+  /**
+   * Sidebar badge uchun faol filtrlar soni.
+   * `sector` va `domains` sanalmaydi — ular sidebarda emas, yuqoridagi
+   * menyu va submenuda boshqariladi.
+   */
   const activeFilterCount = computed(() =>
     (filters.category ? 1 : 0) +
-    (filters.domains.length ? 1 : 0) +
+    (filters.buyerType ? 1 : 0) +
+    (filters.companyTin.trim() ? 1 : 0) +
     (filters.priceMin !== '' ? 1 : 0) +
     (filters.priceMax !== '' ? 1 : 0) +
     (filters.dateFrom ? 1 : 0) +
@@ -68,6 +90,9 @@ export function useTenders() {
       category:   filters.category || undefined,
       // API: bitta 'etender.uzex.uz' yoki bir nechtasi 'a.uz,b.uz'
       domain:     filters.domains.length ? filters.domains.join(',') : undefined,
+      sector:     filters.sector     || undefined,
+      buyer_type: filters.buyerType  || undefined,
+      company_tin: filters.companyTin.trim() || undefined,
       // 'all' standart qiymat — yubormaymiz
       interest:   interest.value === 'all' ? undefined : interest.value,
       price_min:  filters.priceMin !== '' ? filters.priceMin : undefined,
@@ -160,20 +185,34 @@ export function useTenders() {
     return prev
   }
 
-  /** Manbani tanlash/olib tashlash (ko'p tanlov) */
-  function toggleDomain(domain) {
-    if (!domain) {
+/**
+   * Manba(lar)ni tanlash/olib tashlash.
+   * Guruh (masalan UZEX) bir nechta domen beradi — ular birgalikda yoqiladi/o'chadi.
+   * Bo'sh ro'yxat = "barcha manbalar".
+   */
+  function toggleDomains(domains) {
+    if (!domains || !domains.length) {
       filters.domains = []
-    } else {
-      const i = filters.domains.indexOf(domain)
-      if (i === -1) filters.domains.push(domain)
-      else filters.domains.splice(i, 1)
+      apply()
+      return
     }
+
+    const next = new Set(filters.domains)
+    const allOn = domains.every(d => next.has(d))
+    for (const d of domains) {
+      if (allOn) next.delete(d)
+      else next.add(d)
+    }
+    filters.domains = [...next]
     apply()
   }
 
   function reset() {
+    // sector va domains menyuda boshqariladi — tozalashda saqlab qolamiz
+    const { sector, domains } = filters
     Object.assign(filters, cloneDefaults())
+    filters.sector = sector
+    filters.domains = domains
     syncingSort = sort.value !== ''
     sort.value = ''
 
@@ -206,6 +245,6 @@ export function useTenders() {
     filters, interest, sort, page, pageSize,
     items, total, pages, loading, error, lastQuery,
     isSearchMode, totalPages, activeFilterCount,
-    load, apply, applyDebounced, goTo, toggleDomain, setInterest, reset
+    load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
   }
 }

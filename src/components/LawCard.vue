@@ -16,8 +16,15 @@ const dateParts = computed(() => {
   return m ? { day: m[3], rest: `${m[2]}.${m[1]}` } : null
 })
 
-/** first_seen_at oxirgi 24 soat ichida bo'lsa — YANGI */
-const isNew = computed(() => isWithin24h(props.law.first_seen_at))
+/**
+ * YANGI badge — serverning `is_new` maydoni bo'yicha (24 soatda o'zi o'chadi).
+ * Eski javoblarda bu maydon bo'lmasligi mumkin, shunda first_seen_at ga qaytamiz.
+ */
+const isNew = computed(() =>
+  typeof props.law.is_new === 'boolean'
+    ? props.law.is_new
+    : isWithin24h(props.law.first_seen_at)
+)
 </script>
 
 <template>

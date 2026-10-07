@@ -13,12 +13,17 @@ const props = defineProps({
 })
 const emit = defineEmits(['collect', 'toggle-sidebar'])
 
-/** Faol bo'lim: tenders | laws */
-const view = defineModel({ type: String, default: 'tenders' })
+/** Faol bo'lim: government | bank | laws */
+const view = defineModel({ type: String, default: 'government' })
 
+/**
+ * Asosiy menyu toifa bo'yicha: davlat va bank tenderlari alohida,
+ * qonunchilik esa uchinchi bo'lim (lex.uz toifaga bo'linmaydi).
+ */
 const VIEWS = [
-  { value: 'tenders', label: 'Tenderlar', icon: 'ti-file-certificate' },
-  { value: 'laws',    label: 'Qonunlar',  icon: 'ti-gavel' }
+  { value: 'government', label: 'Davlat',   icon: 'ti-building-bank' },
+  { value: 'bank',       label: 'Bank',     icon: 'ti-businessplan' },
+  { value: 'laws',       label: 'Qonunlar', icon: 'ti-gavel' }
 ]
 
 const { theme, toggle } = useTheme()
@@ -32,7 +37,13 @@ const collectTitle = computed(() => {
 
 <template>
   <header class="hdr">
-    <button class="hdr__burger btn btn--ghost btn--icon" @click="emit('toggle-sidebar')" aria-label="Menyu">
+    <!-- Qonunlar bo'limida sidebar yo'q, burger ham kerak emas -->
+    <button
+      v-if="view !== 'laws'"
+      class="hdr__burger btn btn--ghost btn--icon"
+      @click="emit('toggle-sidebar')"
+      aria-label="Menyu"
+    >
       <i class="ti ti-menu-2" />
     </button>
 

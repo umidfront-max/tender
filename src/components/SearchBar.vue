@@ -4,7 +4,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 const model = defineModel({ type: String, default: '' })
 defineProps({
   loading:     { type: Boolean, default: false },
-  placeholder: { type: String, default: "Tender nomi, tashkilot yoki kalit so'z bo'yicha qidiring…" },
+  // Faqat raqam kiritilsa backend uni STIR/tender kodi deb aniq qidiradi
+  placeholder: { type: String, default: "Tender nomi, tashkilot, STIR yoki kalit so'z…" },
   label:       { type: String, default: 'Tenderlarni qidirish' }
 })
 const emit = defineEmits(['search', 'input-debounced'])

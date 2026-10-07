@@ -9,6 +9,7 @@ import ResultToolbar from '@/components/ResultToolbar.vue'
 import TenderList from '@/components/TenderList.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import LawsView from '@/components/LawsView.vue'
+import SourceTabs from '@/components/SourceTabs.vue'
 import { useTenders } from '@/composables/useTenders'
 import { useSources } from '@/composables/useSources'
 import { useCategories } from '@/composables/useCategories'
@@ -20,10 +21,10 @@ const {
   filters, interest, sort, page, pageSize,
   items, total, loading, error,
   isSearchMode, totalPages, activeFilterCount,
-  load, apply, applyDebounced, goTo, toggleDomain, setInterest, reset
+  load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
 } = useTenders()
 
-const { sources, loading: sourcesLoading, load: loadSources, resolve } = useSources()
+const { sources, groups, loading: sourcesLoading, load: loadSources, resolve } = useSources()
 const { options: categories, collect: collectCategories, seed: seedCategories } = useCategories()
 const { stats, loading: statsLoading, load: loadStats, shift: shiftStats } = useStats()
 
@@ -32,8 +33,14 @@ watch(items, collectCategories)
 
 const sidebarOpen = ref(false)
 
-/** Faol bo'lim: tenders | laws */
-const view = ref('tenders')
+/** Faol bo'lim: government | bank | laws. Tender toifasi filtrga ham uzatiladi. */
+const view = ref('government')
+filters.sector = 'government'
+
+/** Joriy toifadagi manbalar — submenu shulardan tuziladi */
+const viewGroups = computed(() =>
+  view.value === 'laws' ? [] : groups.value.filter(g => g.sector === view.value)
+)
 
 const {
   filters: lawFilters, page: lawPage, pageSize: lawPageSize,
@@ -43,16 +50,39 @@ const {
   goTo: goToLaw, reset: resetLaws
 } = useLaws()
 
-// Qonunlar birinchi marta ochilgandagina yuklanadi
 watch(view, (v) => {
-  if (v === 'laws' && !lawsLoaded.value) loadLaws()
+  // Mobil drawer ochiq qolsa body scroll qulfi osilib qoladi
+  sidebarOpen.value = false
+
+  if (v === 'laws') {
+    // Qonunlar birinchi marta ochilgandagina yuklanadi
+    if (!lawsLoaded.value) loadLaws()
+    return
+  }
+
+  // Toifa almashdi: tanlangan manbalar boshqa toifaga tegishli edi, tozalaymiz
+  filters.sector = v
+  filters.domains = []
+  apply()
 })
 
-/** Stats faqat manba va kategoriyaga bog'liq — sahifa almashganda qayta so'ralmaydi */
-const statsParams = computed(() => ({
-  domain: filters.domains.length ? filters.domains.join(',') : undefined,
-  category: filters.category || undefined
-}))
+/**
+ * Stats faqat manba va kategoriyaga bog'liq — sahifa almashganda qayta so'ralmaydi.
+ *
+ * /items/stats `sector` parametrini qabul qilmaydi, shuning uchun toifani
+ * o'sha toifadagi domenlar ro'yxati orqali uzatamiz — aks holda tab sonlari
+ * butun bazani sanab, ro'yxat bilan mos kelmay qolardi.
+ */
+const statsParams = computed(() => {
+  const domains = filters.domains.length
+    ? filters.domains
+    : viewGroups.value.flatMap(g => g.domains)
+
+  return {
+    domain: domains.length ? domains.join(',') : undefined,
+    category: filters.category || undefined
+  }
+})
 
 watch(statsParams, (p) => loadStats(p), { deep: true })
 watch(pageSize, apply)
@@ -106,8 +136,8 @@ function onReset() {
   reset()
 }
 
-function onToggleDomain(domain) {
-  toggleDomain(domain)
+function onToggleDomains(domains) {
+  toggleDomains(domains)
 }
 
 onMounted(() => {
@@ -132,21 +162,28 @@ onMounted(() => {
     />
 
     <div class="shell" :class="{ 'shell--wide': view === 'laws' }">
+      <!-- v-show emas, v-if: FilterSidebar ikki ildizli (fragment) komponent,
+           unga v-show qo'llanmaydi va sidebar grid'da qolib ketadi -->
       <FilterSidebar
-        v-show="view === 'tenders'"
+        v-if="view !== 'laws'"
         v-model:filters="filters"
-        :sources="sources"
-        :sources-loading="sourcesLoading"
         :categories="categories"
         :active-count="activeFilterCount"
         :open="sidebarOpen"
         @apply="onApply"
         @reset="onReset"
-        @toggle-domain="onToggleDomain"
         @close="sidebarOpen = false"
       />
 
       <main class="main">
+        <SourceTabs
+          v-if="view !== 'laws'"
+          :groups="viewGroups"
+          :selected="filters.domains"
+          :loading="sourcesLoading"
+          @toggle="onToggleDomains"
+        />
+
         <div v-if="view === 'laws'" class="main__inner">
           <LawsView
             :items="lawItems"

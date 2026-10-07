@@ -1,20 +1,18 @@
 <script setup>
-import { initials } from '@/utils/format'
+import { BUYER_TYPES } from '@/composables/useTenders'
 import NumberField from './NumberField.vue'
 
 const filters = defineModel('filters', { type: Object, required: true })
 
 defineProps({
-  sources:        { type: Array, default: () => [] },
-  sourcesLoading: { type: Boolean, default: false },
   // /api/v1/items dagi `category` aynan mos kelishi kerak, shuning uchun
   // qiymatlar ma'lumotdan yig'iladi (useCategories)
-  categories:     { type: Array, default: () => [] },
-  activeCount:    { type: Number, default: 0 },
-  open:           { type: Boolean, default: false }
+  categories:  { type: Array, default: () => [] },
+  activeCount: { type: Number, default: 0 },
+  open:        { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain'])
+const emit = defineEmits(['apply', 'reset', 'close'])
 </script>
 
 <template>
@@ -35,44 +33,18 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain'])
       </div>
 
       <div class="side__scroll">
-        <!-- Manbalar -->
+        <!-- Buyurtmachi turi -->
         <section class="grp">
-          <h3 class="grp__title">Manba</h3>
-
-          <div v-if="sourcesLoading" class="srcs">
-            <div v-for="n in 4" :key="n" class="skel-row" />
-          </div>
-
-          <div v-else class="srcs">
+          <h3 class="grp__title">Buyurtmachi</h3>
+          <div class="seg">
             <button
-              class="src"
-              :class="{ 'src--on': !filters.domains.length }"
-              @click="emit('toggle-domain', '')"
-            >
-              <span class="src__avatar src__avatar--all"><i class="ti ti-layout-grid" /></span>
-              <span class="src__name">Barcha manbalar</span>
-              <i v-if="!filters.domains.length" class="ti ti-check src__check" />
-            </button>
-
-            <button
-              v-for="s in sources"
-              :key="s.id"
-              class="src"
-              :class="{ 'src--on': filters.domains.includes(s.domain) }"
-              @click="emit('toggle-domain', s.domain)"
-            >
-              <span class="src__avatar" :style="{ background: s.color }">{{ initials(s.name) }}</span>
-              <span class="src__name">
-                {{ s.name }}
-                <small>{{ s.domain }}</small>
-              </span>
-              <i v-if="filters.domains.includes(s.domain)" class="ti ti-check src__check" />
-            </button>
+              v-for="b in BUYER_TYPES"
+              :key="b.value"
+              class="seg__btn"
+              :class="{ 'seg__btn--on': filters.buyerType === b.value }"
+              @click="filters.buyerType = b.value; emit('apply')"
+            >{{ b.label }}</button>
           </div>
-
-          <p v-if="filters.domains.length > 1" class="grp__note">
-            {{ filters.domains.length }} ta manba tanlandi — natijalar birlashtiriladi
-          </p>
         </section>
 
         <!-- Kategoriya -->
@@ -81,6 +53,21 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain'])
           <select v-model="filters.category" class="field" @change="emit('apply')">
             <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
           </select>
+        </section>
+
+        <!-- INN / STIR -->
+        <section class="grp">
+          <h3 class="grp__title">Buyurtmachi STIR</h3>
+          <input
+            v-model="filters.companyTin"
+            class="field"
+            type="text"
+            inputmode="numeric"
+            placeholder="masalan 200836354"
+            @keydown.enter="emit('apply')"
+            @change="emit('apply')"
+          />
+          <p class="grp__note">Boshidan mos kelishi yetarli</p>
         </section>
 
         <!-- Narx -->
@@ -174,52 +161,34 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain'])
 .grp__title small { font-weight: 500; text-transform: none; letter-spacing: 0; opacity: .8; }
 .grp__note { margin-top: 8px; font-size: 10.5px; line-height: 1.5; color: var(--text-3); }
 
-/* ── Manbalar ── */
-.srcs { display: flex; flex-direction: column; gap: 2px; }
-.src {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%;
-  padding: 7px 9px;
+/* ── Segment tanlagich: toifa, buyurtmachi turi ── */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-sunk);
+  border-radius: var(--r-sm);
+}
+.seg__btn {
+  flex: 1;
+  padding: 6px 4px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
-}
-.src:hover { background: var(--surface-hover); }
-.src--on { background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
-
-.src__avatar {
-  width: 26px; height: 26px;
-  display: grid; place-items: center;
+  border: none;
   border-radius: var(--r-xs);
-  color: #fff;
-  font-size: 10px; font-weight: 700;
-  letter-spacing: -.3px;
-  flex-shrink: 0;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
-.src__avatar--all { background: var(--surface-sunk); color: var(--text-2); font-size: 14px; }
-
-.src__name {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column;
-  font-size: 12.5px; font-weight: 500; color: var(--text);
-  line-height: 1.3;
-}
-.src__name small {
-  font-size: 10.5px; font-weight: 400; color: var(--text-3);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.src--on .src__name { color: var(--accent-text); }
-.src__check { font-size: 15px; color: var(--accent); flex-shrink: 0; }
-
-.skel-row {
-  height: 40px;
-  border-radius: var(--r-sm);
-  background: linear-gradient(90deg, var(--surface-sunk) 25%, var(--border) 37%, var(--surface-sunk) 63%);
-  background-size: 600px 100%;
-  animation: shimmer 1.4s linear infinite;
+.seg__btn:hover { color: var(--text); }
+.seg__btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.seg__btn--on {
+  background: var(--surface);
+  color: var(--accent-text);
+  font-weight: 600;
+  box-shadow: var(--sh-xs);
 }
 
 /* ── Narx ── */
