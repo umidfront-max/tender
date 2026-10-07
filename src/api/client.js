@@ -1,7 +1,9 @@
 /**
  * HTTP klient — fetch ustiga yupqa qatlam.
- * Vite dev-serverida /api proxy orqali backendga uzatiladi (vite.config.js).
- * Production uchun .env da VITE_API_BASE ni belgilang.
+ * VITE_API_BASE bo'sh bo'lsa so'rovlar nisbiy /api ga ketadi:
+ *   dev           — vite.config.js dagi proxy backendga uzatadi
+ *   Docker deploy — nginx /api ni 8083-portdagi backendga proxy qiladi
+ * Docker'da VITE_API_BASE bo'sh qoladi (README, "Deploy (Docker)").
  */
 
 const BASE = import.meta.env.VITE_API_BASE ?? ''
