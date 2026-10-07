@@ -1,0 +1,18 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  tags:
+    - office-srv2
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  # Ketma-ket ikki push bo'lsa deploylar bir-birini bosib ketmasin
+  resource_group: srv2-aggregator-front
+  script:
+    - docker compose build
+    - cp docker-compose.yml /opt/aggregator-front/docker-compose.yml
+    - cd /opt/aggregator-front && docker compose up -d --no-build
+    # nginx konfigi xato bo'lsa konteyner yiqiladi — pipeline buni ko'rsatsin
+    - curl -fsS -o /dev/null --retry 10 --retry-delay 1 --retry-all-errors http://127.0.0.1:8084/
+    - docker image prune -f

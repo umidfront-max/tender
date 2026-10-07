@@ -21,11 +21,17 @@ proxy: { '/api': { target: 'http://192.168.1.10:8000', changeOrigin: true } }
 
 Manzil o'zgarsa faqat shu qatorni tahrirlang.
 
-Production build uchun `.env` faylida:
+## Deploy (Docker)
 
-```
-VITE_API_BASE=http://192.168.1.10:8000
-```
+`main` ga push qilinganda GitLab CI srv2 (192.168.1.202) da image build qiladi va
+konteynerni `/opt/aggregator-front` dan ko'taradi. Sayt: http://192.168.1.202:8084
+
+- `VITE_API_BASE` **bo'sh qoladi** — front `/api/...` ga nisbiy so'rov yuboradi
+- nginx `/api/` ni shu serverdagi backendga (`8083`-port) proxy qiladi — CORS kerak emas
+- Konteyner holati: `cd /opt/aggregator-front && docker compose ps` / `docker compose logs -f`
+
+`VITE_API_BASE` faqat build proxy'siz serve qilinganda kerak — unda backendning
+to'liq manzili yoziladi.
 
 ## Struktura
 
