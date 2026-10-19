@@ -1,0 +1,54 @@
+# TenderHub UZ — frontend build va deploy.
+#
+# Backend manzili kodda saqlanmaydi: Settings → CI/CD → Variables da
+# VITE_API_BASE ni belgilang (masalan https://api.example.uz).
+# Bo'sh qoldirilsa build o'tadi, lekin sayt ma'lumot ko'rsatmaydi —
+# so'rovlar o'z domeniga ketadi va u yerda /api yo'q.
+
+stages:
+  - build
+  - deploy
+
+default:
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+
+variables:
+  # Nisbiy yo'l — sayt ildizda ham, kichik yo'lda ham ishlaydi
+  VITE_BASE: "./"
+
+build:
+  stage: build
+  script:
+    - |
+      if [ -z "$VITE_API_BASE" ]; then
+        echo "DIQQAT: VITE_API_BASE belgilanmagan — sayt backendga ulana olmaydi."
+      else
+        echo "Backend: $VITE_API_BASE"
+      fi
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+# GitLab Pages — instansiyada Pages yoqilgan bo'lsa ishlaydi.
+# Yoqilmagan bo'lsa pipeline yiqilmasin uchun allow_failure.
+pages:
+  stage: deploy
+  needs:
+    - build
+  script:
+    - mv dist public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_failure: true
