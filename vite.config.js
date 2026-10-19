@@ -3,10 +3,6 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-  // GitLab Pages loyihani kichik yo'lda ochadi (/<guruh>/<loyiha>/),
-  // shuning uchun CI da VITE_BASE=./ qilinadi. Lokalda esa oddiy '/'.
-  base: process.env.VITE_BASE ?? '/',
-
   plugins: [vue()],
   resolve: {
     alias: {

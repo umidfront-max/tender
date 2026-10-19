@@ -21,42 +21,17 @@ proxy: { '/api': { target: 'http://192.168.1.10:8000', changeOrigin: true } }
 
 Manzil o'zgarsa faqat shu qatorni tahrirlang.
 
-Production build uchun `.env` faylida:
+## Deploy (Docker)
 
-```
-VITE_API_BASE=http://192.168.1.10:8000
-```
+`main` ga push qilinganda GitLab CI srv2 (192.168.1.202) da image build qiladi va
+konteynerni `/opt/aggregator-front` dan ko'taradi. Sayt: http://192.168.1.202:8084
 
-## Deploy
+- `VITE_API_BASE` **bo'sh qoladi** — front `/api/...` ga nisbiy so'rov yuboradi
+- nginx `/api/` ni shu serverdagi backendga (`8083`-port) proxy qiladi — CORS kerak emas
+- Konteyner holati: `cd /opt/aggregator-front && docker compose ps` / `docker compose logs -f`
 
-GitLab CI (`.gitlab-ci.yml`) ikki bosqichdan iborat:
-
-| Job | Nima qiladi |
-|---|---|
-| `build` | `npm ci` + `npm run build`, natija `dist/` artifact sifatida saqlanadi (1 hafta) |
-| `pages` | `main` ga push bo'lganda `dist/` ni GitLab Pages'ga chiqaradi |
-
-**Backend manzili kodda saqlanmaydi.** Uni GitLab'da belgilang:
-**Settings → CI/CD → Variables → `VITE_API_BASE`**, masalan `https://api.example.uz`.
-Bo'sh qoldirilsa build o'tadi, lekin sayt ma'lumot ko'rsatmaydi — so'rovlar
-o'z domeniga ketadi va u yerda `/api` yo'q.
-
-`VITE_BASE` CI da `./` qilib qo'yilgan: GitLab Pages loyihani
-`/<guruh>/<loyiha>/` kichik yo'lida ochadi va mutlaq yo'llar buzilardi.
-
-Pages instansiyada yoqilmagan bo'lsa `pages` job yiqiladi, lekin
-`allow_failure: true` tufayli pipeline muvaffaqiyatli qolaveradi —
-`dist/` artifact'ini yuklab olib, serverga qo'lda tarqatish mumkin.
-
-### Nimani bilish kerak
-
-Dev rejimdagi `/api` proxy **faqat `vite dev` da ishlaydi**. Production build'da
-proxy yo'q, shuning uchun brauzer backendga to'g'ridan-to'g'ri murojaat qiladi.
-Bundan ikkita talab kelib chiqadi:
-
-- Backend **ommaviy HTTPS** manzilda bo'lishi kerak. Sayt HTTPS'da bo'lib,
-  backend HTTP bo'lsa, brauzer «mixed content» deb bloklaydi.
-- Backendda **CORS** sozlangan bo'lishi kerak — dev rejimda buni proxy yashirib turadi.
+`VITE_API_BASE` faqat build proxy'siz serve qilinganda kerak — unda backendning
+to'liq manzili yoziladi.
 
 ## Struktura
 

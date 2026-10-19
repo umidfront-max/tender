@@ -1,0 +1,19 @@
+# Loyiha nomi qat'iy — CI build papkasida ham, /opt/aggregator-front da ham bir xil
+name: aggregator-front
+
+services:
+  web:
+    build: .
+    image: aggregator-front:latest
+    container_name: aggregator-front
+    restart: unless-stopped
+    ports:
+      - "8084:80"
+    # Konteyner ichidan host'dagi backendga (8083) chiqish uchun
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 128m
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
