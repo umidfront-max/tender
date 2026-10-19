@@ -10,15 +10,17 @@ import TenderList from '@/components/TenderList.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import LawsView from '@/components/LawsView.vue'
 import SourceTabs from '@/components/SourceTabs.vue'
+import ServicesView from '@/components/ServicesView.vue'
 import { useTenders } from '@/composables/useTenders'
 import { useSources } from '@/composables/useSources'
 import { useCategories } from '@/composables/useCategories'
 import { useStats } from '@/composables/useStats'
 import { useCollect } from '@/composables/useCollect'
 import { useLaws } from '@/composables/useLaws'
+import { useServices } from '@/composables/useServices'
 
 const {
-  filters, interest, sort, page, pageSize,
+  filters, tab, matchesOnly, sort, page, pageSize,
   items, total, loading, error,
   isSearchMode, totalPages, activeFilterCount,
   load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
@@ -33,14 +35,23 @@ watch(items, collectCategories)
 
 const sidebarOpen = ref(false)
 
-/** Faol bo'lim: government | bank | laws. Tender toifasi filtrga ham uzatiladi. */
+/** Faol bo'lim: government | bank | laws | services */
 const view = ref('government')
+
+/** Tenderlar ko'rinadigan bo'limlar */
+const isTenderView = computed(() => view.value === 'government' || view.value === 'bank')
 filters.sector = 'government'
 
 /** Joriy toifadagi manbalar — submenu shulardan tuziladi */
 const viewGroups = computed(() =>
-  view.value === 'laws' ? [] : groups.value.filter(g => g.sector === view.value)
+  isTenderView.value ? groups.value.filter(g => g.sector === view.value) : []
 )
+
+const {
+  items: services, loading: servicesLoading, saving: servicesSaving,
+  error: servicesError, loaded: servicesLoaded,
+  load: loadServices, add: addService, edit: editService, remove: removeService
+} = useServices()
 
 const {
   filters: lawFilters, page: lawPage, pageSize: lawPageSize,
@@ -54,9 +65,13 @@ watch(view, (v) => {
   // Mobil drawer ochiq qolsa body scroll qulfi osilib qoladi
   sidebarOpen.value = false
 
+  // Qonunlar va xizmatlar birinchi marta ochilgandagina yuklanadi
   if (v === 'laws') {
-    // Qonunlar birinchi marta ochilgandagina yuklanadi
     if (!lawsLoaded.value) loadLaws()
+    return
+  }
+  if (v === 'services') {
+    if (!servicesLoaded.value) loadServices()
     return
   }
 
@@ -65,6 +80,14 @@ watch(view, (v) => {
   filters.domains = []
   apply()
 })
+
+/** Xizmat qo'shildi/o'zgardi — forma tozalansin */
+async function onAddService(body, done) {
+  if (await addService(body)) done()
+}
+async function onEditService(id, body, done) {
+  if (await editService(id, body)) done()
+}
 
 /**
  * Stats faqat manba va kategoriyaga bog'liq — sahifa almashganda qayta so'ralmaydi.
@@ -161,11 +184,11 @@ onMounted(() => {
       @toggle-sidebar="sidebarOpen = !sidebarOpen"
     />
 
-    <div class="shell" :class="{ 'shell--wide': view === 'laws' }">
+    <div class="shell" :class="{ 'shell--wide': !isTenderView }">
       <!-- v-show emas, v-if: FilterSidebar ikki ildizli (fragment) komponent,
            unga v-show qo'llanmaydi va sidebar grid'da qolib ketadi -->
       <FilterSidebar
-        v-if="view !== 'laws'"
+        v-if="isTenderView"
         v-model:filters="filters"
         :categories="categories"
         :active-count="activeFilterCount"
@@ -177,14 +200,27 @@ onMounted(() => {
 
       <main class="main">
         <SourceTabs
-          v-if="view !== 'laws'"
+          v-if="isTenderView"
           :groups="viewGroups"
           :selected="filters.domains"
           :loading="sourcesLoading"
           @toggle="onToggleDomains"
         />
 
-        <div v-if="view === 'laws'" class="main__inner">
+        <div v-if="view === 'services'" class="main__inner">
+          <ServicesView
+            :items="services"
+            :loading="servicesLoading"
+            :saving="servicesSaving"
+            :error="servicesError"
+            @add="onAddService"
+            @edit="onEditService"
+            @remove="removeService"
+            @retry="loadServices"
+          />
+        </div>
+
+        <div v-else-if="view === 'laws'" class="main__inner">
           <LawsView
             :items="lawItems"
             :total="lawTotal"
@@ -214,9 +250,10 @@ onMounted(() => {
 
           <section class="results">
             <InterestTabs
-              v-model="interest"
+              v-model="tab"
               :stats="stats"
               :stats-loading="statsLoading"
+              :match-count="matchesOnly && !loading ? total : null"
             />
 
             <ResultToolbar
@@ -225,6 +262,7 @@ onMounted(() => {
               :total="total"
               :loading="loading"
               :search-mode="isSearchMode"
+              :match-mode="matchesOnly"
               :active-count="activeFilterCount"
               @open-filters="sidebarOpen = true"
             />

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import {
   formatPrice, formatNumber, formatDate, formatDateTime, formatRelative,
   formatFileSize, formatScore, initials, isToday,
-  deadlineInfo, statusLabel, categoryLabel, buyerTypeLabel
+  deadlineInfo, statusLabel, categoryLabel, buyerTypeLabel, matchInfo
 } from '@/utils/format'
 import { looksLikeHtml, sanitizeHtml, stripHtml } from '@/utils/html'
 
@@ -28,6 +28,13 @@ const deadline = computed(() => deadlineInfo(extra.value.deadline))
 const status   = computed(() => statusLabel(extra.value.status))
 const score    = computed(() => formatScore(props.item.score))
 const buyerType = computed(() => buyerTypeLabel(extra.value.buyer_type))
+
+/**
+ * AI moslik. match_score null bo'lsa — hali baholanmagan: skoring fonda
+ * ishlaydi, yangi tenderlarda bir necha daqiqa null turishi normal.
+ */
+const match   = computed(() => matchInfo(props.item.match_score))
+const scoring = computed(() => props.item.match_score === null || props.item.match_score === undefined)
 
 /** Xodim belgisi: new | interested | not_interested */
 const interest = computed(() => props.item.interest ?? 'new')
@@ -109,7 +116,15 @@ function mark(value) {
               <i class="ti ti-flame" />Yangi
             </span>
 
-            <span v-if="buyerType" class="chip chip--buyer">
+            <span v-if="match" class="chip chip--match" :class="`chip--m-${match.tone}`" :title="item.match_service ? `Eng mos xizmat: ${item.match_service}` : 'AI moslik bahosi'">
+            <i class="ti ti-sparkles" />{{ match.text }}
+          </span>
+
+          <span v-else-if="scoring" class="chip chip--scoring" title="AI hali bu tenderni baholamagan">
+            <i class="ti ti-loader-2" />AI jarayonda
+          </span>
+
+          <span v-if="buyerType" class="chip chip--buyer">
             <i class="ti ti-wallet" />{{ buyerType }}
           </span>
 
@@ -169,6 +184,18 @@ function mark(value) {
               <dd :class="{ mono: d.mono }">{{ d.value }}</dd>
             </div>
           </dl>
+
+          <!-- AI moslik izohi -->
+          <section v-if="item.ai_comment || item.match_service" class="blk ai">
+            <h4 class="blk__title">
+              <i class="ti ti-sparkles" />AI moslik
+              <span v-if="match" class="blk__count" :class="`blk__count--m-${match.tone}`">{{ match.text }}</span>
+            </h4>
+            <p v-if="item.match_service" class="ai__svc">
+              <i class="ti ti-target-arrow" />{{ item.match_service }}
+            </p>
+            <p v-if="item.ai_comment" class="ai__text">{{ item.ai_comment }}</p>
+          </section>
 
           <!-- extra.goods — tender ichidagi tovarlar/xizmatlar -->
           <section v-if="goods.length" class="blk">
@@ -330,6 +357,16 @@ function mark(value) {
 .chip--ok    { background: var(--ok-bg); color: var(--ok-fg); }
 .chip--muted { background: var(--surface-sunk); color: var(--text-3); }
 .chip--buyer { background: var(--surface-sunk); color: var(--text-2); }
+
+/* AI moslik — foiz qancha yuqori bo'lsa rang shuncha kuchli */
+.chip--match { font-weight: 600; }
+.chip--m-high { background: var(--ok-bg);   color: var(--ok-fg); }
+.chip--m-mid  { background: var(--warn-bg); color: var(--warn-fg); }
+.chip--m-low  { background: var(--surface-sunk); color: var(--text-2); }
+.chip--m-weak { background: var(--surface-sunk); color: var(--text-3); }
+
+.chip--scoring { background: var(--surface-sunk); color: var(--text-3); }
+.chip--scoring i { animation: spin 1.2s linear infinite; }
 .chip--score { background: color-mix(in srgb, var(--violet-500) 12%, transparent); color: color-mix(in srgb, var(--violet-500) 72%, var(--text)); }
 .chip--time  { background: transparent; color: var(--text-3); padding-left: 0; }
 
@@ -487,6 +524,25 @@ function mark(value) {
 }
 
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ── AI moslik bloki ── */
+.ai__svc {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.ai__svc i { font-size: 14px; color: var(--text-3); }
+.ai__text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  background: var(--surface-sunk);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.blk__count--m-high { background: var(--ok-bg);   color: var(--ok-fg); }
+.blk__count--m-mid  { background: var(--warn-bg); color: var(--warn-fg); }
 
 .files { list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .file {

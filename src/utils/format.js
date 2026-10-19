@@ -192,3 +192,23 @@ export function buyerTypeLabel(value) {
   if (value === 'corporate') return 'Korporativ'
   return null
 }
+
+/**
+ * AI moslik foizi (match_score, 0-100).
+ * `null` = hali baholanmagan — skoring fonda ishlaydi va yangi tenderlarda
+ * bir necha daqiqa, xizmat o'zgarganda bir soatgacha null bo'lib turishi normal.
+ *
+ * @returns {{text: string, tone: 'high'|'mid'|'low'|'weak', value: number}|null}
+ */
+export function matchInfo(score) {
+  const v = Number(score)
+  if (score === null || score === undefined || !Number.isFinite(v)) return null
+
+  const value = Math.round(v)
+  let tone = 'weak'
+  if (value >= 70) tone = 'high'
+  else if (value >= 40) tone = 'mid'
+  else if (value >= 15) tone = 'low'
+
+  return { value, tone, text: `${value}%` }
+}

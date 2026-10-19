@@ -13,7 +13,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['collect', 'toggle-sidebar'])
 
-/** Faol bo'lim: government | bank | laws */
+/** Faol bo'lim: government | bank | laws | services */
 const view = defineModel({ type: String, default: 'government' })
 
 /**
@@ -23,7 +23,8 @@ const view = defineModel({ type: String, default: 'government' })
 const VIEWS = [
   { value: 'government', label: 'Davlat',   icon: 'ti-building-bank' },
   { value: 'bank',       label: 'Bank',     icon: 'ti-businessplan' },
-  { value: 'laws',       label: 'Qonunlar', icon: 'ti-gavel' }
+  { value: 'laws',       label: 'Qonunlar', icon: 'ti-gavel' },
+  { value: 'services',   label: 'Xizmatlar', icon: 'ti-briefcase' }
 ]
 
 const { theme, toggle } = useTheme()
@@ -39,7 +40,7 @@ const collectTitle = computed(() => {
   <header class="hdr">
     <!-- Qonunlar bo'limida sidebar yo'q, burger ham kerak emas -->
     <button
-      v-if="view !== 'laws'"
+      v-if="view === 'government' || view === 'bank'"
       class="hdr__burger btn btn--ghost btn--icon"
       @click="emit('toggle-sidebar')"
       aria-label="Menyu"

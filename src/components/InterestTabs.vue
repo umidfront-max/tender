@@ -8,7 +8,9 @@ import { formatNumber } from '@/utils/format'
  */
 defineProps({
   stats:        { type: Object, required: true },
-  statsLoading: { type: Boolean, default: false }
+  statsLoading: { type: Boolean, default: false },
+  // "Mos keladi" tabining soni /items/stats da yo'q — ro'yxat yuklangach keladi
+  matchCount:   { type: Number, default: null }
 })
 
 const active = defineModel({ type: String, required: true })
@@ -27,9 +29,17 @@ const active = defineModel({ type: String, required: true })
     >
       <i class="ti" :class="t.icon" />
       <span class="tab__label">{{ t.label }}</span>
-      <span class="tab__count mono" :class="{ 'is-loading': statsLoading }">
-        {{ formatNumber(stats[t.count] ?? 0) }}
-      </span>
+
+      <span
+        v-if="t.count"
+        class="tab__count mono"
+        :class="{ 'is-loading': statsLoading }"
+      >{{ formatNumber(stats[t.count] ?? 0) }}</span>
+
+      <span
+        v-else-if="t.match && matchCount !== null"
+        class="tab__count mono"
+      >{{ formatNumber(matchCount) }}</span>
     </button>
   </div>
 </template>
@@ -84,6 +94,8 @@ const active = defineModel({ type: String, required: true })
 .tab--on.tab--interested     { color: var(--ok-fg); }
 .tab--on.tab--interested i   { color: var(--ok-fg); }
 .tab--on.tab--not_interested { color: var(--text-2); }
+.tab--on.tab--matches        { color: color-mix(in srgb, var(--violet-500) 72%, var(--text)); }
+.tab--on.tab--matches i      { color: var(--violet-500); }
 
 .tab__count {
   min-width: 20px;

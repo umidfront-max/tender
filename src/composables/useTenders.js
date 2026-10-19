@@ -33,23 +33,33 @@ export const BUYER_TYPES = Object.freeze([
  * Bo'sh qiymat — parametr yuborilmaydi va API o'zi tanlaydi:
  * qidiruvda `relevance`, oddiy ro'yxatda `newest`.
  */
-export const SORTS = Object.freeze(['relevance', 'newest', 'oldest', 'price_asc', 'price_desc'])
+export const SORTS = Object.freeze(['relevance', 'match', 'newest', 'oldest', 'price_asc', 'price_desc'])
+
+/** "Mos keladi" tabi uchun minimal AI moslik foizi */
+export const MATCH_THRESHOLD = 70
 
 function cloneDefaults() {
   return { ...DEFAULT_FILTERS, domains: [] }
 }
 
-/** Tablar: /api/v1/items dagi `interest` filtri qiymatlari */
+/**
+ * Tablar. Birinchi to'rttasi `interest` filtri qiymatlari, oxirgisi esa
+ * boshqa o'lchov — AI moslik bo'yicha (min_match + sort=match).
+ */
 export const TABS = Object.freeze([
   { value: 'all',            label: 'Hammasi',    icon: 'ti-layout-grid',  count: 'total' },
   { value: 'new',            label: 'Yangi',      icon: 'ti-sparkles',     count: 'new' },
   { value: 'interested',     label: 'Qiziqarli',  icon: 'ti-star',         count: 'interested' },
-  { value: 'not_interested', label: 'Qiziqarsiz', icon: 'ti-thumb-down',   count: 'not_interested' }
+  { value: 'not_interested', label: 'Qiziqarsiz', icon: 'ti-thumb-down',   count: 'not_interested' },
+  // Sonini /items/stats bermaydi, shuning uchun badge ro'yxat yuklangach chiqadi
+  { value: 'matches',        label: 'Mos keladi', icon: 'ti-sparkles-filled', count: null, match: true }
 ])
 
 export function useTenders() {
   const filters  = reactive(cloneDefaults())
-  const interest = ref('all')   // faol tab
+  const tab      = ref('all')   // TABS dagi qiymat
+  const interest = computed(() => (tab.value === 'matches' ? 'all' : tab.value))
+  const matchesOnly = computed(() => tab.value === 'matches')
   const sort     = ref('')   // '' = API standarti
   const page     = ref(1)
   const pageSize = ref(12)   // API cheklovi: 1..100
@@ -95,6 +105,8 @@ export function useTenders() {
       company_tin: filters.companyTin.trim() || undefined,
       // 'all' standart qiymat — yubormaymiz
       interest:   interest.value === 'all' ? undefined : interest.value,
+      // "Mos keladi" tabi: faqat yetarlicha mos kelganlar
+      min_match:  matchesOnly.value ? MATCH_THRESHOLD : undefined,
       price_min:  filters.priceMin !== '' ? filters.priceMin : undefined,
       price_max:  filters.priceMax !== '' ? filters.priceMax : undefined,
       date_from:  filters.dateFrom ? `${filters.dateFrom}T00:00:00` : undefined,
@@ -175,7 +187,8 @@ export function useTenders() {
     }
 
     // Joriy tab bilan mos kelmay qolgan bo'lsa ro'yxatdan chiqaramiz
-    if (interest.value !== 'all' && interest.value !== value) {
+    // ("Mos keladi" tabi qiziqish belgisiga bog'liq emas)
+    if (!matchesOnly.value && interest.value !== 'all' && interest.value !== value) {
       const i = items.value.findIndex(x => x.id === item.id)
       if (i !== -1) {
         items.value.splice(i, 1)
@@ -218,7 +231,7 @@ export function useTenders() {
 
     // Tab o'zgarsa uning kuzatuvchisi apply() ni o'zi chaqiradi —
     // aks holda bitta tozalashga ikkita so'rov ketardi
-    if (interest.value !== 'all') interest.value = 'all'
+    if (tab.value !== 'all') tab.value = 'all'
     else apply()
   }
 
@@ -230,8 +243,18 @@ export function useTenders() {
     apply()
   })
 
-  // Tab almashganda 1-sahifadan qayta yuklaymiz
-  watch(interest, apply)
+  // Tab almashganda 1-sahifadan qayta yuklaymiz.
+  // "Mos keladi" ga o'tilganda saralash ham moslikka o'tadi.
+  watch(tab, (v, prev) => {
+    if (v === 'matches') {
+      syncingSort = sort.value !== 'match'
+      sort.value = 'match'
+    } else if (prev === 'matches' && sort.value === 'match') {
+      syncingSort = true
+      sort.value = ''
+    }
+    apply()
+  })
 
   // Qidiruvdan chiqilganda relevance ma'nosini yo'qotadi — standartga qaytamiz
   watch(isSearchMode, (on) => {
@@ -242,7 +265,7 @@ export function useTenders() {
   })
 
   return {
-    filters, interest, sort, page, pageSize,
+    filters, tab, interest, matchesOnly, sort, page, pageSize,
     items, total, pages, loading, error, lastQuery,
     isSearchMode, totalPages, activeFilterCount,
     load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
