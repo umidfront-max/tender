@@ -96,7 +96,8 @@ qidiruvda `relevance`, ro'yxatda `newest`.
 `domain` bir nechta bo'lishi mumkin — vergul bilan: `xt-xarid.uz,hayotbirja.uz`.
 
 `sector` (`government` / `bank`) va `buyer_type` (`budget` / `corporate`) sidebarda
-segment tanlagich, `company_tin` esa alohida maydon — boshidan mos kelishi yetarli.
+segment tanlagich. `company_tin` uchun alohida maydon yo'q — qidiruv maydoniga
+raqam kiritilsa backend uni o'zi STIR deb qidiradi.
 
 Qidiruv maydoniga **faqat raqam** kiritilsa backend uni STIR yoki tender kodi deb
 aniq qidiradi, ma'no bo'yicha emas. Shuning uchun alohida `ident` parametri kerak emas.

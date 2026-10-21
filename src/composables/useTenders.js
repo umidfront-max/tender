@@ -7,7 +7,6 @@ export const DEFAULT_FILTERS = Object.freeze({
   domains: [],      // bir nechta manba: API ga vergul bilan uzatiladi
   sector: '',       // government | bank
   buyerType: '',    // budget | corporate
-  companyTin: '',   // INN/STIR, boshidan mos kelishi yetarli
   priceMin: '',
   priceMax: '',
   // Narx birligi — kiritilgan son shunga ko'paytirilib yuboriladi
@@ -106,7 +105,6 @@ export function useTenders() {
   const activeFilterCount = computed(() =>
     (filters.category ? 1 : 0) +
     (filters.buyerType ? 1 : 0) +
-    (filters.companyTin.trim() ? 1 : 0) +
     (filters.priceMin !== '' ? 1 : 0) +
     (filters.priceMax !== '' ? 1 : 0) +
     (filters.dateFrom ? 1 : 0) +
@@ -123,7 +121,6 @@ export function useTenders() {
       domain:     filters.domains.length ? filters.domains.join(',') : undefined,
       sector:     filters.sector     || undefined,
       buyer_type: filters.buyerType  || undefined,
-      company_tin: filters.companyTin.trim() || undefined,
       // 'all' standart qiymat — yubormaymiz
       interest:   interest.value === 'all' ? undefined : interest.value,
       // "Mos keladi" tabi: faqat yetarlicha mos kelganlar

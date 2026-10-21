@@ -173,20 +173,6 @@ const visibleSources = computed(() => {
           <p class="grp__note">Narx valyutasi manbaga qarab UZS, USD yoki EUR bo'ladi</p>
         </section>
 
-        <!-- INN / STIR -->
-        <section class="grp">
-          <h3 class="grp__title">Buyurtmachi STIR</h3>
-          <input
-            v-model="filters.companyTin"
-            class="field"
-            type="text"
-            inputmode="numeric"
-            placeholder="masalan 200836354"
-            @keydown.enter="onApply"
-          />
-          <p class="grp__note">Boshidan mos kelishi yetarli</p>
-        </section>
-
         <!-- Sana: ikkita maydon yonma-yon sidebarga sig'maydi, ustma-ust turadi -->
         <section class="grp">
           <h3 class="grp__title">E'lon sanasi</h3>
