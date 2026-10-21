@@ -138,16 +138,6 @@ const visibleSources = computed(() => {
           <p class="grp__note">Narx valyutasi manbaga qarab UZS, USD yoki EUR bo'ladi</p>
         </section>
 
-        <!-- Sana -->
-        <section class="grp">
-          <h3 class="grp__title">E'lon sanasi</h3>
-          <div class="dates">
-            <input v-model="filters.dateFrom" class="field" type="date" @change="emit('apply')" />
-            <span class="dates__sep">—</span>
-            <input v-model="filters.dateTo" class="field" type="date" @change="emit('apply')" />
-          </div>
-        </section>
-
         <!-- INN / STIR -->
         <section class="grp">
           <h3 class="grp__title">Buyurtmachi STIR</h3>
@@ -161,6 +151,21 @@ const visibleSources = computed(() => {
             @change="emit('apply')"
           />
           <p class="grp__note">Boshidan mos kelishi yetarli</p>
+        </section>
+
+        <!-- Sana: ikkita maydon yonma-yon sidebarga sig'maydi, ustma-ust turadi -->
+        <section class="grp">
+          <h3 class="grp__title">E'lon sanasi</h3>
+          <div class="dates">
+            <label class="dates__row">
+              <span class="dates__lbl">dan</span>
+              <input v-model="filters.dateFrom" class="field" type="date" @change="emit('apply')" />
+            </label>
+            <label class="dates__row">
+              <span class="dates__lbl">gacha</span>
+              <input v-model="filters.dateTo" class="field" type="date" @change="emit('apply')" />
+            </label>
+          </div>
         </section>
       </div>
 
@@ -315,7 +320,8 @@ const visibleSources = computed(() => {
 
 /* ── Narx ── */
 .price { display: flex; flex-direction: column; gap: 8px; }
-.price__row { display: flex; align-items: center; gap: 8px; }
+.price__row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.price__row :deep(.field) { flex: 1; min-width: 0; }
 .price__lbl {
   width: 42px; flex-shrink: 0;
   font-size: 12px; color: var(--text-3);
@@ -323,8 +329,14 @@ const visibleSources = computed(() => {
 .field--unit { width: 78px; flex-shrink: 0; padding-right: 26px; }
 
 /* ── Sana ── */
-.dates { display: flex; align-items: center; gap: 7px; }
-.dates__sep { color: var(--text-3); font-size: 12px; }
+.dates { display: flex; flex-direction: column; gap: 8px; }
+.dates__row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dates__lbl {
+  width: 42px; flex-shrink: 0;
+  font-size: 12px; color: var(--text-3);
+}
+/* date maydoni o'z ichki kengligidan kichraymaydi — min-width shart */
+.dates__row .field { flex: 1; min-width: 0; }
 
 .side__foot {
   display: flex; gap: 8px;
