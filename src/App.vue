@@ -22,7 +22,7 @@ import { useServiceMatches } from '@/composables/useServiceMatches'
 
 const {
   filters, tab, matchesOnly, sort, page, pageSize,
-  items, total, loading, error,
+  items, total, loading, error, matchTotal: matchTabCount,
   isSearchMode, totalPages, activeFilterCount,
   load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
 } = useTenders()
@@ -285,7 +285,7 @@ onMounted(() => {
               v-model="tab"
               :stats="stats"
               :stats-loading="statsLoading"
-              :match-count="matchesOnly && !loading ? total : null"
+              :match-count="matchTabCount"
             />
 
             <ResultToolbar

@@ -159,6 +159,8 @@ export function useTenders() {
 
       // Server sahifani cheklab qo'ysa (masalan filtr toraysa) — mos holatga keltiramiz
       if (data?.page && data.page !== page.value) page.value = data.page
+
+      loadMatchCount()
     } catch (e) {
       if (e.name === 'AbortError') return
       error.value = e.message
@@ -167,6 +169,45 @@ export function useTenders() {
       pages.value = 1
     } finally {
       if (!signal.aborted) loading.value = false
+    }
+  }
+
+  /**
+   * "Mos keladi" tabining soni. /items/stats uni bermaydi, shuning uchun
+   * bitta yengil so'rov bilan (page_size=1) faqat `total` olinadi.
+   * Qolgan tablar kabi qiziqish belgisiga bog'liq emas, boshqa filtrlar esa
+   * ro'yxat bilan bir xil — aks holda son ro'yxatga mos kelmay qolardi.
+   */
+  const matchTotal = ref(null)
+  let matchController = null
+  let matchKey = ''
+
+  async function loadMatchCount() {
+    const p = buildParams()
+    const params = {
+      ...p,
+      interest:  undefined,
+      min_match: MATCH_THRESHOLD,
+      sort:      undefined,
+      page:      1,
+      page_size: 1
+    }
+
+    // Sahifa almashganda filtrlar o'zgarmaydi — qayta so'rash shart emas
+    const key = JSON.stringify(params)
+    if (key === matchKey) return
+    matchKey = key
+
+    matchController?.abort()
+    matchController = new AbortController()
+
+    try {
+      const data = await fetchItems(params, matchController.signal)
+      matchTotal.value = data?.total ?? 0
+    } catch (e) {
+      if (e.name === 'AbortError') return
+      matchKey = ''          // keyingi urinishda qayta so'ralsin
+      matchTotal.value = null
     }
   }
 
@@ -287,7 +328,7 @@ export function useTenders() {
 
   return {
     filters, tab, interest, matchesOnly, sort, page, pageSize,
-    items, total, pages, loading, error, lastQuery,
+    items, total, pages, loading, error, lastQuery, matchTotal,
     isSearchMode, totalPages, activeFilterCount,
     load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
   }

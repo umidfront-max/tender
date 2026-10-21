@@ -197,7 +197,8 @@ export function categoryLabel(value) {
 /** score (0..1) -> "3.2%" ko'rinishida moslik bahosi */
 export function formatScore(score) {
   const v = Number(score)
-  if (!Number.isFinite(v)) return null
+  // 0 — qidiruvsiz ro'yxatda hammaga qo'yiladi, chip sifatida ma'nosiz
+  if (!Number.isFinite(v) || v <= 0) return null
   return `${(v * 100).toFixed(1)}%`
 }
 

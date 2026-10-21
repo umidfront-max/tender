@@ -31,6 +31,15 @@ const score    = computed(() => formatScore(props.item.score))
 const buyerType = computed(() => buyerTypeLabel(extra.value.buyer_type))
 
 /**
+ * Tender turi domen yo'lidan olinadi. UZEX sub-manbalarida manba nomi
+ * aynan turning o'zi ("Taklif so'rovi") — u holda ikkinchi marta ko'rsatmaymiz.
+ */
+const tenderType = computed(() => {
+  const t = tenderTypeLabel(props.item.domain)
+  return t === (props.source.name || '') ? null : t
+})
+
+/**
  * AI moslik. match_score null bo'lsa — hali baholanmagan: skoring fonda
  * ishlaydi, yangi tenderlarda bir necha daqiqa null turishi normal.
  */
@@ -119,7 +128,7 @@ function mark(value) {
 
           <span class="card__meta">
             <span class="chip chip--src">{{ source.name || item.domain }}</span>
-            <span class="chip chip--tag">{{ tenderTypeLabel(item.domain) }}</span>
+            <span v-if="tenderType" class="chip chip--tag">{{ tenderType }}</span>
             <span v-if="item.category" class="chip chip--tag">{{ categoryLabel(item.category) }}</span>
             <span v-if="status" class="chip chip--tag">{{ status.text }}</span>
             <span v-if="buyerType" class="chip chip--tag">{{ buyerType }}</span>
@@ -129,6 +138,7 @@ function mark(value) {
             <span class="chip chip--time">{{ relTime }}</span>
           </span>
 
+          <!-- Uzun izoh kartani cho'zib yubormasin — to'lig'i ochilganda ko'rinadi -->
           <span v-if="item.ai_comment" class="card__ai">
             <i class="ti ti-sparkles" /><b>AI:</b> {{ item.ai_comment }}
           </span>
@@ -187,6 +197,12 @@ function mark(value) {
               <dd :class="{ mono: d.mono }">{{ d.value }}</dd>
             </div>
           </dl>
+
+          <!-- Kartada izoh ikki qatorga kesiladi, bu yerda to'liq ko'rinadi -->
+          <section v-if="item.ai_comment" class="blk">
+            <h4 class="blk__title"><i class="ti ti-sparkles" />AI izohi</h4>
+            <p class="ai__text">{{ item.ai_comment }}</p>
+          </section>
 
           <!-- extra.goods — tender ichidagi tovarlar/xizmatlar -->
           <section v-if="goods.length" class="blk">
@@ -373,7 +389,18 @@ function mark(value) {
   gap: 6px;
   margin-top: 10px;
 }
-.card__meta .chip { border-radius: var(--r-xs); }
+/* Kategoriya nomlari juda uzun bo'lishi mumkin — chip qatordan toshib,
+   o'ngdagi tugmalar ostiga tushib ketmasligi uchun kesiladi */
+.card__meta .chip {
+  border-radius: var(--r-xs);
+  max-width: 100%;
+  display: inline-block;
+  line-height: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card__meta .chip i { vertical-align: -2px; margin-right: 4px; }
+.chip--cat { max-width: 320px; }
 .chip--src   { background: var(--accent-bg); color: var(--accent-text); }
 .chip--tag   { background: var(--surface-sunk); color: var(--text-2); }
 .chip--cat   { background: var(--accent-bg); color: var(--accent-text); }
@@ -382,7 +409,10 @@ function mark(value) {
 
 /* AI izohi */
 .card__ai {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   margin-top: 12px;
   padding: 9px 14px;
   background: color-mix(in srgb, var(--violet-500) 7%, transparent);
@@ -552,6 +582,15 @@ function mark(value) {
 }
 
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.ai__text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  background: var(--surface-sunk);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
 
 .files { list-style: none; display: flex; flex-direction: column; gap: 5px; }
 .file {
