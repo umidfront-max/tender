@@ -56,7 +56,15 @@ const interest = computed(() => props.item.interest ?? 'new')
 const updated = computed(() => props.item.was_updated === true)
 
 const goods      = computed(() => extra.value.goods ?? [])
-const categories = computed(() => extra.value.categories ?? [])
+/**
+ * extra.categories ko'pincha item.category ning o'zini takrorlaydi —
+ * u kartaning yuqorisida chip bo'lib turibdi, panelda qaytarmaymiz.
+ */
+const categories = computed(() => {
+  const main = String(props.item.category ?? '').trim().toLowerCase()
+  return (extra.value.categories ?? [])
+    .filter(c => String(c ?? '').trim().toLowerCase() !== main)
+})
 const files      = computed(() => extra.value.files ?? [])
 
 /** tbcbank.uz `detail` ni HTML formatda yuboradi — tozalab chiqaramiz */
@@ -138,9 +146,12 @@ function mark(value) {
             <span class="chip chip--time">{{ relTime }}</span>
           </span>
 
-          <!-- Uzun izoh kartani cho'zib yubormasin — to'lig'i ochilganda ko'rinadi -->
-          <span v-if="item.ai_comment" class="card__ai">
-            <i class="ti ti-sparkles" /><b>AI:</b> {{ item.ai_comment }}
+          <!-- Yopiq kartada 2 qatorga kesiladi; ochilganda panelda to'liq chiqadi,
+               shuning uchun bu yerda takrorlanmaydi -->
+          <span v-if="item.ai_comment && !open" class="card__ai">
+            <span class="card__ai-text">
+              <i class="ti ti-sparkles" /><b>AI:</b> {{ item.ai_comment }}
+            </span>
           </span>
         </span>
       </button>
@@ -408,15 +419,20 @@ function mark(value) {
 .chip--time  { background: transparent; color: var(--text-3); padding-left: 2px; }
 
 /* AI izohi */
+/* Kesish ichki elementda: padding bilan bitta elementda bo'lsa uchinchi
+   qator pastki bo'shliqda yarim ko'rinib qoladi */
 .card__ai {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
   margin-top: 12px;
   padding: 9px 14px;
   background: color-mix(in srgb, var(--violet-500) 7%, transparent);
   border-radius: var(--r-sm);
+}
+.card__ai-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 12.5px;
   line-height: 1.55;
   color: var(--text);
