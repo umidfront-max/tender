@@ -23,6 +23,15 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain', 'clear-dom
 const query = ref('')
 const searchable = computed(() => props.sources.length > 8)
 
+/**
+ * Ro'yxatda faqat sayt nomi ko'rsatiladi: UZEX sub-manbalarining to'liq
+ * yo'li ("new-xarid.uzex.uz/mahalliy-auksion") ustunga sig'maydi, qolaversa
+ * yo'lning oxiri manba nomida allaqachon bor.
+ */
+function host(domain) {
+  return String(domain || '').split('/')[0]
+}
+
 const visibleSources = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return props.sources
@@ -71,14 +80,14 @@ const visibleSources = computed(() => {
               <span class="src__name src__name--all">Hammasi</span>
             </label>
 
-            <label v-for="s in visibleSources" :key="s.domain" class="src">
+            <label v-for="s in visibleSources" :key="s.domain" class="src" :title="s.domain">
               <input
                 type="checkbox"
                 :checked="selected.includes(s.domain)"
                 @change="emit('toggle-domain', s.domain)"
               />
               <span class="src__name">{{ s.name }}</span>
-              <span class="src__dom">{{ s.domain }}</span>
+              <span class="src__dom">{{ host(s.domain) }}</span>
             </label>
 
             <p v-if="searchable && !visibleSources.length" class="srcs__empty">Topilmadi</p>
@@ -213,7 +222,7 @@ const visibleSources = computed(() => {
 .side__clear:disabled { opacity: .45; cursor: default; }
 .side__close { display: none; }
 
-.side__scroll { flex: 1; overflow-y: auto; padding: 16px 18px; }
+.side__scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px 18px; }
 
 .grp { margin-bottom: 20px; }
 .grp:last-child { margin-bottom: 4px; }
@@ -241,7 +250,8 @@ const visibleSources = computed(() => {
 .src {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  min-width: 0;
   padding: 7px 6px;
   border-radius: var(--r-xs);
   cursor: pointer;
@@ -255,16 +265,22 @@ const visibleSources = computed(() => {
   cursor: pointer;
 }
 .src__name {
-  flex: 1; min-width: 0;
+  flex: 1 1 auto; min-width: 0;
   font-size: 12.5px;
   line-height: 1.4;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .src__name--all { font-weight: 600; }
 .src__dom {
-  flex-shrink: 0;
+  flex: 0 1 auto; min-width: 0;
   font-size: 11px;
   color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Segment tanlagich: buyurtmachi turi ── */
