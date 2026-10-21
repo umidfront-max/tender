@@ -175,6 +175,19 @@ export function statusLabel(status) {
 }
 
 /** Kategoriya nomi — 'general' texnik qiymat, qolganlari saytdagi holicha */
+/**
+ * Tender turi. Alohida maydon yo'q — UZEX new-xarid domeni yo'lida turadi:
+ * ".../narx-sorovlari" -> Taklif so'rovi, ".../auksion" -> Auksion.
+ * Qolgan manbalarda oddiy tender.
+ */
+export function tenderTypeLabel(domain) {
+  const d = String(domain || '')
+  if (d.includes('narx-sorovlari'))   return "Taklif so'rovi"
+  if (d.includes('mahalliy-auksion')) return 'Mahalliy auksion'
+  if (d.includes('auksion'))          return 'Auksion'
+  return 'Tender'
+}
+
 export function categoryLabel(value) {
   if (!value) return ''
   if (value === 'general') return 'Umumiy'

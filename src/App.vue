@@ -9,7 +9,6 @@ import ResultToolbar from '@/components/ResultToolbar.vue'
 import TenderList from '@/components/TenderList.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import LawsView from '@/components/LawsView.vue'
-import SourceTabs from '@/components/SourceTabs.vue'
 import ServicesView from '@/components/ServicesView.vue'
 import ServiceMatches from '@/components/ServiceMatches.vue'
 import { useTenders } from '@/composables/useTenders'
@@ -28,7 +27,7 @@ const {
   load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
 } = useTenders()
 
-const { sources, groups, loading: sourcesLoading, load: loadSources, resolve } = useSources()
+const { sources, groups, load: loadSources, resolve } = useSources()
 const { options: categories, collect: collectCategories, seed: seedCategories } = useCategories()
 const { stats, loading: statsLoading, load: loadStats, shift: shiftStats } = useStats()
 
@@ -44,9 +43,14 @@ const view = ref('government')
 const isTenderView = computed(() => view.value === 'government' || view.value === 'bank')
 filters.sector = 'government'
 
-/** Joriy toifadagi manbalar — submenu shulardan tuziladi */
+/** Joriy toifadagi manbalar — stats va sidebar ro'yxati shulardan tuziladi */
 const viewGroups = computed(() =>
   isTenderView.value ? groups.value.filter(g => g.sector === view.value) : []
+)
+
+/** Sidebar ro'yxati: Davlat'da saytlar, Banklar'da banklar */
+const viewSources = computed(() =>
+  isTenderView.value ? sources.value.filter(s => s.sector === view.value) : []
 )
 
 const {
@@ -202,22 +206,19 @@ onMounted(() => {
         v-if="isTenderView"
         v-model:filters="filters"
         :categories="categories"
+        :sources="viewSources"
+        :selected="filters.domains"
+        :source-label="view === 'bank' ? 'Bank' : 'Manba'"
         :active-count="activeFilterCount"
         :open="sidebarOpen"
         @apply="onApply"
         @reset="onReset"
         @close="sidebarOpen = false"
+        @toggle-domain="d => onToggleDomains([d])"
+        @clear-domains="onToggleDomains([])"
       />
 
       <main class="main">
-        <SourceTabs
-          v-if="isTenderView"
-          :groups="viewGroups"
-          :selected="filters.domains"
-          :loading="sourcesLoading"
-          @toggle="onToggleDomains"
-        />
-
         <div v-if="view === 'services'" class="main__inner">
           <ServiceMatches
             v-if="matchService"

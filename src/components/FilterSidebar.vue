@@ -1,18 +1,35 @@
 <script setup>
-import { BUYER_TYPES } from '@/composables/useTenders'
+import { ref, computed } from 'vue'
+import { BUYER_TYPES, PRICE_UNITS } from '@/composables/useTenders'
 import NumberField from './NumberField.vue'
 
 const filters = defineModel('filters', { type: Object, required: true })
 
-defineProps({
+const props = defineProps({
   // /api/v1/items dagi `category` aynan mos kelishi kerak, shuning uchun
   // qiymatlar ma'lumotdan yig'iladi (useCategories)
   categories:  { type: Array, default: () => [] },
+  // Joriy toifadagi manbalar: Davlat'da saytlar, Banklar'da banklar
+  sources:     { type: Array, default: () => [] },
+  selected:    { type: Array, default: () => [] },
+  sourceLabel: { type: String, default: 'Manba' },
   activeCount: { type: Number, default: 0 },
   open:        { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['apply', 'reset', 'close'])
+const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain', 'clear-domains'])
+
+/** Ro'yxat uzun bo'lsa (banklar) qidiruv maydoni chiqadi */
+const query = ref('')
+const searchable = computed(() => props.sources.length > 8)
+
+const visibleSources = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return props.sources
+  return props.sources.filter(s =>
+    (s.name || '').toLowerCase().includes(q) || (s.domain || '').toLowerCase().includes(q)
+  )
+})
 </script>
 
 <template>
@@ -23,16 +40,51 @@ const emit = defineEmits(['apply', 'reset', 'close'])
     <aside class="side" :class="{ 'side--open': open }">
       <div class="side__head">
         <h2 class="side__title">
-          <i class="ti ti-adjustments-horizontal" />
           Filtrlar
           <span v-if="activeCount" class="side__count">{{ activeCount }}</span>
         </h2>
+        <button class="side__clear" :disabled="!activeCount" @click="emit('reset')">Tozalash</button>
         <button class="side__close btn btn--ghost btn--icon btn--sm" @click="emit('close')" aria-label="Yopish">
           <i class="ti ti-x" />
         </button>
       </div>
 
       <div class="side__scroll">
+        <!-- Manba / Bank — domain filtri -->
+        <section class="grp">
+          <h3 class="grp__title">
+            {{ sourceLabel }}
+            <small v-if="sources.length">· {{ sources.length }} ta</small>
+          </h3>
+
+          <input
+            v-if="searchable"
+            v-model="query"
+            class="field field--search"
+            type="search"
+            :placeholder="`${sourceLabel} nomini yozing…`"
+          />
+
+          <div class="srcs" :class="{ 'srcs--scroll': sources.length > 8 }">
+            <label class="src">
+              <input type="checkbox" :checked="!selected.length" @change="emit('clear-domains')" />
+              <span class="src__name src__name--all">Hammasi</span>
+            </label>
+
+            <label v-for="s in visibleSources" :key="s.domain" class="src">
+              <input
+                type="checkbox"
+                :checked="selected.includes(s.domain)"
+                @change="emit('toggle-domain', s.domain)"
+              />
+              <span class="src__name">{{ s.name }}</span>
+              <span class="src__dom">{{ s.domain }}</span>
+            </label>
+
+            <p v-if="searchable && !visibleSources.length" class="srcs__empty">Topilmadi</p>
+          </div>
+        </section>
+
         <!-- Buyurtmachi turi -->
         <section class="grp">
           <h3 class="grp__title">Buyurtmachi</h3>
@@ -55,6 +107,38 @@ const emit = defineEmits(['apply', 'reset', 'close'])
           </select>
         </section>
 
+        <!-- Narx: son + birlik, API ga to'liq summa ketadi -->
+        <section class="grp">
+          <h3 class="grp__title">Narx, UZS</h3>
+          <div class="price">
+            <label class="price__row">
+              <span class="price__lbl">dan</span>
+              <NumberField v-model="filters.priceMin" placeholder="0" />
+              <select v-model="filters.priceMinUnit" class="field field--unit" @change="emit('apply')">
+                <option v-for="u in PRICE_UNITS" :key="u.value" :value="u.value">{{ u.label }}</option>
+              </select>
+            </label>
+            <label class="price__row">
+              <span class="price__lbl">gacha</span>
+              <NumberField v-model="filters.priceMax" placeholder="chegarasiz" />
+              <select v-model="filters.priceMaxUnit" class="field field--unit" @change="emit('apply')">
+                <option v-for="u in PRICE_UNITS" :key="u.value" :value="u.value">{{ u.label }}</option>
+              </select>
+            </label>
+          </div>
+          <p class="grp__note">Narx valyutasi manbaga qarab UZS, USD yoki EUR bo'ladi</p>
+        </section>
+
+        <!-- Sana -->
+        <section class="grp">
+          <h3 class="grp__title">E'lon sanasi</h3>
+          <div class="dates">
+            <input v-model="filters.dateFrom" class="field" type="date" @change="emit('apply')" />
+            <span class="dates__sep">—</span>
+            <input v-model="filters.dateTo" class="field" type="date" @change="emit('apply')" />
+          </div>
+        </section>
+
         <!-- INN / STIR -->
         <section class="grp">
           <h3 class="grp__title">Buyurtmachi STIR</h3>
@@ -69,40 +153,11 @@ const emit = defineEmits(['apply', 'reset', 'close'])
           />
           <p class="grp__note">Boshidan mos kelishi yetarli</p>
         </section>
-
-        <!-- Narx -->
-        <section class="grp">
-          <h3 class="grp__title">Narx oralig'i</h3>
-          <div class="pair">
-            <NumberField v-model="filters.priceMin" placeholder="dan" />
-            <span class="pair__sep">—</span>
-            <NumberField v-model="filters.priceMax" placeholder="gacha" />
-          </div>
-          <p class="grp__note">Narx valyutasi manbaga qarab UZS, USD yoki EUR bo'ladi</p>
-        </section>
-
-        <!-- Sana -->
-        <section class="grp">
-          <h3 class="grp__title">E'lon sanasi</h3>
-          <div class="dates">
-            <label class="dates__row">
-              <span>dan</span>
-              <input v-model="filters.dateFrom" class="field" type="date" />
-            </label>
-            <label class="dates__row">
-              <span>gacha</span>
-              <input v-model="filters.dateTo" class="field" type="date" />
-            </label>
-          </div>
-        </section>
       </div>
 
       <div class="side__foot">
         <button class="btn btn--primary" style="flex:1" @click="emit('apply')">
           <i class="ti ti-filter" /> Qo'llash
-        </button>
-        <button class="btn btn--ghost btn--icon" :disabled="!activeCount" @click="emit('reset')" aria-label="Tozalash">
-          <i class="ti ti-filter-off" />
         </button>
       </div>
     </aside>
@@ -130,15 +185,15 @@ const emit = defineEmits(['apply', 'reset', 'close'])
 }
 
 .side__head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 10px;
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border);
 }
 .side__title {
+  flex: 1;
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600; color: var(--text);
+  font-size: 14px; font-weight: 600; color: var(--text);
 }
-.side__title i { font-size: 16px; color: var(--text-3); }
 .side__count {
   min-width: 18px; height: 18px; padding: 0 5px;
   display: grid; place-items: center;
@@ -146,22 +201,73 @@ const emit = defineEmits(['apply', 'reset', 'close'])
   border-radius: var(--r-full);
   font-size: 11px; font-weight: 700;
 }
+.side__clear {
+  background: none; border: none;
+  padding: 0;
+  color: var(--accent-text);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.side__clear:hover:not(:disabled) { text-decoration: underline; }
+.side__clear:disabled { opacity: .45; cursor: default; }
 .side__close { display: none; }
 
 .side__scroll { flex: 1; overflow-y: auto; padding: 16px 18px; }
 
-.grp { margin-bottom: 22px; }
+.grp { margin-bottom: 20px; }
 .grp:last-child { margin-bottom: 4px; }
 .grp__title {
-  font-size: 10.5px; font-weight: 700;
-  color: var(--text-3);
-  text-transform: uppercase; letter-spacing: .6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text);
   margin-bottom: 9px;
 }
-.grp__title small { font-weight: 500; text-transform: none; letter-spacing: 0; opacity: .8; }
+.grp__title small { font-weight: 500; color: var(--text-3); }
 .grp__note { margin-top: 8px; font-size: 10.5px; line-height: 1.5; color: var(--text-3); }
 
-/* ── Segment tanlagich: toifa, buyurtmachi turi ── */
+/* ── Manba / bank ro'yxati ── */
+.field--search { height: 34px; font-size: 12.5px; margin-bottom: 8px; }
+
+.srcs { display: flex; flex-direction: column; }
+.srcs--scroll {
+  max-height: 232px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.srcs__empty { padding: 8px 4px; font-size: 11.5px; color: var(--text-3); }
+
+.src {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 6px;
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.src:hover { background: var(--surface-hover); }
+.src input {
+  width: 15px; height: 15px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.src__name {
+  flex: 1; min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.src__name--all { font-weight: 600; }
+.src__dom {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ── Segment tanlagich: buyurtmachi turi ── */
 .seg {
   display: flex;
   gap: 2px;
@@ -192,16 +298,17 @@ const emit = defineEmits(['apply', 'reset', 'close'])
 }
 
 /* ── Narx ── */
-.pair { display: flex; align-items: center; gap: 7px; }
-.pair__sep { color: var(--text-3); font-size: 12px; }
+.price { display: flex; flex-direction: column; gap: 8px; }
+.price__row { display: flex; align-items: center; gap: 8px; }
+.price__lbl {
+  width: 42px; flex-shrink: 0;
+  font-size: 12px; color: var(--text-3);
+}
+.field--unit { width: 78px; flex-shrink: 0; padding-right: 26px; }
 
 /* ── Sana ── */
-.dates { display: flex; flex-direction: column; gap: 8px; }
-.dates__row { display: flex; align-items: center; gap: 10px; }
-.dates__row span {
-  width: 40px; flex-shrink: 0;
-  font-size: 11.5px; color: var(--text-3);
-}
+.dates { display: flex; align-items: center; gap: 7px; }
+.dates__sep { color: var(--text-3); font-size: 12px; }
 
 .side__foot {
   display: flex; gap: 8px;
@@ -209,7 +316,6 @@ const emit = defineEmits(['apply', 'reset', 'close'])
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
-.side__foot .btn:disabled { opacity: .4; cursor: default; }
 
 @media (max-width: 900px) {
   .scrim { display: block; }

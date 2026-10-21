@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import {
   formatPrice, formatPriceShort, formatDateNumeric, formatNumber, formatDate, formatDateTime, formatRelative,
   formatFileSize, formatScore, initials, isToday,
-  deadlineInfo, statusLabel, categoryLabel, buyerTypeLabel, matchInfo
+  deadlineInfo, statusLabel, categoryLabel, buyerTypeLabel, matchInfo, tenderTypeLabel
 } from '@/utils/format'
 import { looksLikeHtml, sanitizeHtml, stripHtml } from '@/utils/html'
 
@@ -119,6 +119,7 @@ function mark(value) {
 
           <span class="card__meta">
             <span class="chip chip--src">{{ source.name || item.domain }}</span>
+            <span class="chip chip--tag">{{ tenderTypeLabel(item.domain) }}</span>
             <span v-if="item.category" class="chip chip--tag">{{ categoryLabel(item.category) }}</span>
             <span v-if="status" class="chip chip--tag">{{ status.text }}</span>
             <span v-if="buyerType" class="chip chip--tag">{{ buyerType }}</span>

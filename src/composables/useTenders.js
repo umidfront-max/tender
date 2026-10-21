@@ -10,9 +10,30 @@ export const DEFAULT_FILTERS = Object.freeze({
   companyTin: '',   // INN/STIR, boshidan mos kelishi yetarli
   priceMin: '',
   priceMax: '',
+  // Narx birligi — kiritilgan son shunga ko'paytirilib yuboriladi
+  priceMinUnit: 'mln',
+  priceMaxUnit: 'mlrd',
   dateFrom: '',
   dateTo: ''
 })
+
+/**
+ * Narx birliklari. API doim to'liq sonni kutadi, shuning uchun kiritilgan
+ * qiymat shu ko'paytuvchiga ko'paytirib yuboriladi.
+ */
+export const PRICE_UNITS = Object.freeze([
+  { value: 'mln',  label: 'mln',  mult: 1e6 },
+  { value: 'mlrd', label: 'mlrd', mult: 1e9 },
+  { value: 'trln', label: 'trln', mult: 1e12 }
+])
+
+function toAbsolute(value, unit) {
+  if (value === '' || value === null || value === undefined) return undefined
+  const n = Number(value)
+  if (!Number.isFinite(n)) return undefined
+  const u = PRICE_UNITS.find(x => x.value === unit)
+  return Math.round(n * (u ? u.mult : 1))
+}
 
 /** Provider toifasi (sector) */
 export const SECTORS = Object.freeze([
@@ -107,8 +128,8 @@ export function useTenders() {
       interest:   interest.value === 'all' ? undefined : interest.value,
       // "Mos keladi" tabi: faqat yetarlicha mos kelganlar
       min_match:  matchesOnly.value ? MATCH_THRESHOLD : undefined,
-      price_min:  filters.priceMin !== '' ? filters.priceMin : undefined,
-      price_max:  filters.priceMax !== '' ? filters.priceMax : undefined,
+      price_min:  toAbsolute(filters.priceMin, filters.priceMinUnit),
+      price_max:  toAbsolute(filters.priceMax, filters.priceMaxUnit),
       date_from:  filters.dateFrom ? `${filters.dateFrom}T00:00:00` : undefined,
       date_to:    filters.dateTo   ? `${filters.dateTo}T23:59:59`   : undefined,
       // Bo'sh bo'lsa yubormaymiz — API standartini qo'llaydi.
