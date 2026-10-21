@@ -264,11 +264,13 @@ export function useTenders() {
    * Manba(lar)ni tanlash/olib tashlash.
    * Guruh (masalan UZEX) bir nechta domen beradi — ular birgalikda yoqiladi/o'chadi.
    * Bo'sh ro'yxat = "barcha manbalar".
+   *
+   * Faqat qiymatni o'zgartiradi, so'rov yubormaydi: sidebardagi hamma filtr
+   * "Qo'llash" bosilgandagina qo'llanadi.
    */
   function toggleDomains(domains) {
     if (!domains || !domains.length) {
       filters.domains = []
-      apply()
       return
     }
 
@@ -279,7 +281,6 @@ export function useTenders() {
       else next.add(d)
     }
     filters.domains = [...next]
-    apply()
   }
 
   function reset() {

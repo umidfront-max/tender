@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { BUYER_TYPES, PRICE_UNITS } from '@/composables/useTenders'
 import NumberField from './NumberField.vue'
 
@@ -22,6 +22,41 @@ const emit = defineEmits(['apply', 'reset', 'close', 'toggle-domain', 'clear-dom
 /** Ro'yxat uzun bo'lsa (banklar) qidiruv maydoni chiqadi */
 const query = ref('')
 const searchable = computed(() => props.sources.length > 8)
+
+/**
+ * Filtrlar "Qo'llash" bosilgandagina qo'llanadi. Shunda tanlov qilinganini
+ * ko'rsatib turish kerak — aks holda bosgan narsa ishlamayotgandek tuyuladi.
+ */
+const dirty = ref(false)
+let settling = false
+
+function markDirty() {
+  if (!settling) dirty.value = true
+}
+
+watch(filters, markDirty, { deep: true })
+watch(() => props.selected, markDirty, { deep: true })
+
+// Bo'lim almashganda (Davlat <-> Banklar) ro'yxat o'zi qayta yuklanadi,
+// shuning uchun yuqoridagi kuzatuvchi qo'ygan belgini darhol olib tashlaymiz
+watch(() => filters.sector, () => settle())
+
+/** Qo'llangandan keyin belgini o'chiramiz — o'zgarish kuzatuvchisi ham tinchiydi */
+function settle() {
+  settling = true
+  dirty.value = false
+  nextTick(() => { settling = false })
+}
+
+function onApply() {
+  settle()
+  emit('apply')
+}
+
+function onReset() {
+  settle()
+  emit('reset')
+}
 
 /**
  * Ro'yxatda faqat sayt nomi ko'rsatiladi: UZEX sub-manbalarining to'liq
@@ -52,7 +87,7 @@ const visibleSources = computed(() => {
           Filtrlar
           <span v-if="activeCount" class="side__count">{{ activeCount }}</span>
         </h2>
-        <button class="side__clear" :disabled="!activeCount" @click="emit('reset')">Tozalash</button>
+        <button class="side__clear" :disabled="!activeCount && !selected.length" @click="onReset">Tozalash</button>
         <button class="side__close btn btn--ghost btn--icon btn--sm" @click="emit('close')" aria-label="Yopish">
           <i class="ti ti-x" />
         </button>
@@ -103,7 +138,7 @@ const visibleSources = computed(() => {
               :key="b.value"
               class="seg__btn"
               :class="{ 'seg__btn--on': filters.buyerType === b.value }"
-              @click="filters.buyerType = b.value; emit('apply')"
+              @click="filters.buyerType = b.value"
             >{{ b.label }}</button>
           </div>
         </section>
@@ -111,7 +146,7 @@ const visibleSources = computed(() => {
         <!-- Kategoriya -->
         <section class="grp">
           <h3 class="grp__title">Kategoriya</h3>
-          <select v-model="filters.category" class="field" @change="emit('apply')">
+          <select v-model="filters.category" class="field">
             <option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option>
           </select>
         </section>
@@ -123,14 +158,14 @@ const visibleSources = computed(() => {
             <label class="price__row">
               <span class="price__lbl">dan</span>
               <NumberField v-model="filters.priceMin" placeholder="0" />
-              <select v-model="filters.priceMinUnit" class="field field--unit" @change="emit('apply')">
+              <select v-model="filters.priceMinUnit" class="field field--unit">
                 <option v-for="u in PRICE_UNITS" :key="u.value" :value="u.value">{{ u.label }}</option>
               </select>
             </label>
             <label class="price__row">
               <span class="price__lbl">gacha</span>
               <NumberField v-model="filters.priceMax" placeholder="chegarasiz" />
-              <select v-model="filters.priceMaxUnit" class="field field--unit" @change="emit('apply')">
+              <select v-model="filters.priceMaxUnit" class="field field--unit">
                 <option v-for="u in PRICE_UNITS" :key="u.value" :value="u.value">{{ u.label }}</option>
               </select>
             </label>
@@ -147,8 +182,7 @@ const visibleSources = computed(() => {
             type="text"
             inputmode="numeric"
             placeholder="masalan 200836354"
-            @keydown.enter="emit('apply')"
-            @change="emit('apply')"
+            @keydown.enter="onApply"
           />
           <p class="grp__note">Boshidan mos kelishi yetarli</p>
         </section>
@@ -159,19 +193,20 @@ const visibleSources = computed(() => {
           <div class="dates">
             <label class="dates__row">
               <span class="dates__lbl">dan</span>
-              <input v-model="filters.dateFrom" class="field" type="date" @change="emit('apply')" />
+              <input v-model="filters.dateFrom" class="field" type="date" />
             </label>
             <label class="dates__row">
               <span class="dates__lbl">gacha</span>
-              <input v-model="filters.dateTo" class="field" type="date" @change="emit('apply')" />
+              <input v-model="filters.dateTo" class="field" type="date" />
             </label>
           </div>
         </section>
       </div>
 
       <div class="side__foot">
-        <button class="btn btn--primary" style="flex:1" @click="emit('apply')">
+        <button class="btn btn--primary foot__apply" :class="{ 'foot__apply--dirty': dirty }" style="flex:1" @click="onApply">
           <i class="ti ti-filter" /> Qo'llash
+          <span v-if="dirty" class="foot__dot" />
         </button>
       </div>
     </aside>
@@ -343,6 +378,18 @@ const visibleSources = computed(() => {
   padding: 14px 18px;
   border-top: 1px solid var(--border);
   background: var(--surface);
+}
+
+/* Qo'llanmagan o'zgarish bor — tugma shuni bildirib turadi */
+.foot__apply { position: relative; }
+.foot__apply:not(.foot__apply--dirty) { background: var(--n-400); }
+.foot__dot {
+  position: absolute;
+  top: 7px; right: 9px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--warn-500);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 @media (max-width: 900px) {
