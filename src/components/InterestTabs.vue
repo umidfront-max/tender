@@ -8,9 +8,7 @@ import { formatNumber } from '@/utils/format'
  */
 defineProps({
   stats:        { type: Object, required: true },
-  statsLoading: { type: Boolean, default: false },
-  // "Mos keladi" tabining soni /items/stats da yo'q — ro'yxat yuklangach keladi
-  matchCount:   { type: Number, default: null }
+  statsLoading: { type: Boolean, default: false }
 })
 
 const active = defineModel({ type: String, required: true })
@@ -35,11 +33,6 @@ const active = defineModel({ type: String, required: true })
         class="tab__count mono"
         :class="{ 'is-loading': statsLoading }"
       >{{ formatNumber(stats[t.count] ?? 0) }}</span>
-
-      <span
-        v-else-if="t.match && matchCount !== null"
-        class="tab__count mono"
-      >{{ formatNumber(matchCount) }}</span>
     </button>
   </div>
 </template>

@@ -21,8 +21,8 @@ import { useServices } from '@/composables/useServices'
 import { useServiceMatches } from '@/composables/useServiceMatches'
 
 const {
-  filters, tab, matchesOnly, sort, page, pageSize,
-  items, total, loading, error, matchTotal: matchTabCount,
+  filters, tab, sort, page, pageSize,
+  items, total, loading, error,
   isSearchMode, totalPages, activeFilterCount,
   load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
 } = useTenders()
@@ -285,7 +285,6 @@ onMounted(() => {
               v-model="tab"
               :stats="stats"
               :stats-loading="statsLoading"
-              :match-count="matchTabCount"
             />
 
             <ResultToolbar
@@ -294,7 +293,6 @@ onMounted(() => {
               :total="total"
               :loading="loading"
               :search-mode="isSearchMode"
-              :match-mode="matchesOnly"
               :active-count="activeFilterCount"
               @open-filters="sidebarOpen = true"
             />

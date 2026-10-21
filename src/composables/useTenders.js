@@ -58,31 +58,25 @@ export const SORTS = Object.freeze([
   'price_asc', 'price_desc', 'deadline_soon', 'deadline_late'
 ])
 
-/** "Mos keladi" tabi uchun minimal AI moslik foizi */
+/** Xizmatga mos tenderlar ro'yxati uchun minimal AI moslik foizi */
 export const MATCH_THRESHOLD = 70
 
 function cloneDefaults() {
   return { ...DEFAULT_FILTERS, domains: [] }
 }
 
-/**
- * Tablar. Birinchi to'rttasi `interest` filtri qiymatlari, oxirgisi esa
- * boshqa o'lchov — AI moslik bo'yicha (min_match + sort=match).
- */
+/** Tablar — `interest` filtri qiymatlari */
 export const TABS = Object.freeze([
   { value: 'all',            label: 'Hammasi',    icon: 'ti-layout-grid',  count: 'total' },
   { value: 'new',            label: 'Yangi',      icon: 'ti-sparkles',     count: 'new' },
   { value: 'interested',     label: 'Qiziqarli',  icon: 'ti-star',         count: 'interested' },
-  { value: 'not_interested', label: 'Qiziqarsiz', icon: 'ti-thumb-down',   count: 'not_interested' },
-  // Sonini /items/stats bermaydi, shuning uchun badge ro'yxat yuklangach chiqadi
-  { value: 'matches',        label: 'Mos keladi', icon: 'ti-sparkles-filled', count: null, match: true }
+  { value: 'not_interested', label: 'Qiziqarsiz', icon: 'ti-thumb-down',   count: 'not_interested' }
 ])
 
 export function useTenders() {
   const filters  = reactive(cloneDefaults())
   const tab      = ref('all')   // TABS dagi qiymat
-  const interest = computed(() => (tab.value === 'matches' ? 'all' : tab.value))
-  const matchesOnly = computed(() => tab.value === 'matches')
+  const interest = computed(() => tab.value)
   const sort     = ref('')   // '' = API standarti
   const page     = ref(1)
   const pageSize = ref(12)   // API cheklovi: 1..100
@@ -126,8 +120,6 @@ export function useTenders() {
       buyer_type: filters.buyerType  || undefined,
       // 'all' standart qiymat — yubormaymiz
       interest:   interest.value === 'all' ? undefined : interest.value,
-      // "Mos keladi" tabi: faqat yetarlicha mos kelganlar
-      min_match:  matchesOnly.value ? MATCH_THRESHOLD : undefined,
       price_min:  toAbsolute(filters.priceMin, filters.priceMinUnit),
       price_max:  toAbsolute(filters.priceMax, filters.priceMaxUnit),
       date_from:  filters.dateFrom ? `${filters.dateFrom}T00:00:00` : undefined,
@@ -159,8 +151,6 @@ export function useTenders() {
 
       // Server sahifani cheklab qo'ysa (masalan filtr toraysa) — mos holatga keltiramiz
       if (data?.page && data.page !== page.value) page.value = data.page
-
-      loadMatchCount()
     } catch (e) {
       if (e.name === 'AbortError') return
       // Muddat bo'yicha saralash backendga qo'shilgunicha 422 qaytadi —
@@ -173,45 +163,6 @@ export function useTenders() {
       pages.value = 1
     } finally {
       if (!signal.aborted) loading.value = false
-    }
-  }
-
-  /**
-   * "Mos keladi" tabining soni. /items/stats uni bermaydi, shuning uchun
-   * bitta yengil so'rov bilan (page_size=1) faqat `total` olinadi.
-   * Qolgan tablar kabi qiziqish belgisiga bog'liq emas, boshqa filtrlar esa
-   * ro'yxat bilan bir xil — aks holda son ro'yxatga mos kelmay qolardi.
-   */
-  const matchTotal = ref(null)
-  let matchController = null
-  let matchKey = ''
-
-  async function loadMatchCount() {
-    const p = buildParams()
-    const params = {
-      ...p,
-      interest:  undefined,
-      min_match: MATCH_THRESHOLD,
-      sort:      undefined,
-      page:      1,
-      page_size: 1
-    }
-
-    // Sahifa almashganda filtrlar o'zgarmaydi — qayta so'rash shart emas
-    const key = JSON.stringify(params)
-    if (key === matchKey) return
-    matchKey = key
-
-    matchController?.abort()
-    matchController = new AbortController()
-
-    try {
-      const data = await fetchItems(params, matchController.signal)
-      matchTotal.value = data?.total ?? 0
-    } catch (e) {
-      if (e.name === 'AbortError') return
-      matchKey = ''          // keyingi urinishda qayta so'ralsin
-      matchTotal.value = null
     }
   }
 
@@ -253,8 +204,7 @@ export function useTenders() {
     }
 
     // Joriy tab bilan mos kelmay qolgan bo'lsa ro'yxatdan chiqaramiz
-    // ("Mos keladi" tabi qiziqish belgisiga bog'liq emas)
-    if (!matchesOnly.value && interest.value !== 'all' && interest.value !== value) {
+    if (interest.value !== 'all' && interest.value !== value) {
       const i = items.value.findIndex(x => x.id === item.id)
       if (i !== -1) {
         items.value.splice(i, 1)
@@ -310,18 +260,8 @@ export function useTenders() {
     apply()
   })
 
-  // Tab almashganda 1-sahifadan qayta yuklaymiz.
-  // "Mos keladi" ga o'tilganda saralash ham moslikka o'tadi.
-  watch(tab, (v, prev) => {
-    if (v === 'matches') {
-      syncingSort = sort.value !== 'match'
-      sort.value = 'match'
-    } else if (prev === 'matches' && sort.value === 'match') {
-      syncingSort = true
-      sort.value = ''
-    }
-    apply()
-  })
+  // Tab almashganda 1-sahifadan qayta yuklaymiz
+  watch(tab, apply)
 
   // Qidiruvdan chiqilganda relevance ma'nosini yo'qotadi — standartga qaytamiz
   watch(isSearchMode, (on) => {
@@ -332,8 +272,8 @@ export function useTenders() {
   })
 
   return {
-    filters, tab, interest, matchesOnly, sort, page, pageSize,
-    items, total, pages, loading, error, lastQuery, matchTotal,
+    filters, tab, interest, sort, page, pageSize,
+    items, total, pages, loading, error, lastQuery,
     isSearchMode, totalPages, activeFilterCount,
     load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
   }

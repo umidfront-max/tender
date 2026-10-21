@@ -6,7 +6,6 @@ const props = defineProps({
   total:      { type: Number, default: 0 },
   loading:    { type: Boolean, default: false },
   searchMode: { type: Boolean, default: false },
-  matchMode:  { type: Boolean, default: false },
   activeCount:{ type: Number, default: 0 }
 })
 
