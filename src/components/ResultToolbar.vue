@@ -21,6 +21,7 @@ defineEmits(['open-filters'])
 const options = computed(() => [
   { value: '', label: props.searchMode ? 'Avto — moslik' : 'Avto — eng yangi' },
   ...(props.searchMode ? [{ value: 'relevance', label: 'Moslik bo\'yicha' }] : []),
+  { value: 'match',      label: 'AI moslik — eng yuqori' },
   { value: 'newest',     label: 'Eng yangi' },
   { value: 'oldest',     label: 'Eng eski' },
   { value: 'price_desc', label: 'Narx: yuqoridan' },

@@ -52,6 +52,29 @@ export function formatPriceCompact(price, currency = 'UZS') {
   return compact ? `${compact} ${currency}` : null
 }
 
+const shortNf = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 })
+
+/** Kartadagi narx: "4,85 mlrd UZS", "780 mln UZS" */
+export function formatPriceShort(price, currency = 'UZS') {
+  const v = Number(price)
+  if (!Number.isFinite(v) || v <= 0) return null
+  if (v >= 1e12) return `${shortNf.format(v / 1e12)} trln ${currency}`
+  if (v >= 1e9)  return `${shortNf.format(v / 1e9)} mlrd ${currency}`
+  if (v >= 1e6)  return `${shortNf.format(v / 1e6)} mln ${currency}`
+  return `${nf.format(Math.round(v))} ${currency}`
+}
+
+const numDtf = new Intl.DateTimeFormat('ru-RU', {
+  timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric'
+})
+
+/** "18.10.2026" */
+export function formatDateNumeric(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : numDtf.format(d)
+}
+
 const dtf = new Intl.DateTimeFormat('uz-UZ', {
   timeZone: TZ, day: '2-digit', month: 'short', year: 'numeric'
 })

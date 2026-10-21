@@ -11,6 +11,7 @@ import PaginationBar from '@/components/PaginationBar.vue'
 import LawsView from '@/components/LawsView.vue'
 import SourceTabs from '@/components/SourceTabs.vue'
 import ServicesView from '@/components/ServicesView.vue'
+import ServiceMatches from '@/components/ServiceMatches.vue'
 import { useTenders } from '@/composables/useTenders'
 import { useSources } from '@/composables/useSources'
 import { useCategories } from '@/composables/useCategories'
@@ -18,6 +19,7 @@ import { useStats } from '@/composables/useStats'
 import { useCollect } from '@/composables/useCollect'
 import { useLaws } from '@/composables/useLaws'
 import { useServices } from '@/composables/useServices'
+import { useServiceMatches } from '@/composables/useServiceMatches'
 
 const {
   filters, tab, matchesOnly, sort, page, pageSize,
@@ -53,6 +55,14 @@ const {
   load: loadServices, add: addService, edit: editService, remove: removeService
 } = useServices()
 
+/** Xizmatlar bo'limida bitta xizmatga mos tenderlar ko'rinishi */
+const {
+  service: matchService, page: matchPage, pageSize: matchPageSize,
+  items: matchItems, total: matchTotal, totalPages: matchTotalPages,
+  loading: matchLoading, error: matchError,
+  load: loadMatches, open: openMatches, close: closeMatches, goTo: goToMatch
+} = useServiceMatches()
+
 const {
   filters: lawFilters, page: lawPage, pageSize: lawPageSize,
   items: lawItems, total: lawTotal, totalPages: lawTotalPages,
@@ -64,6 +74,7 @@ const {
 watch(view, (v) => {
   // Mobil drawer ochiq qolsa body scroll qulfi osilib qoladi
   sidebarOpen.value = false
+  closeMatches()
 
   // Qonunlar va xizmatlar birinchi marta ochilgandagina yuklanadi
   if (v === 'laws') {
@@ -208,7 +219,26 @@ onMounted(() => {
         />
 
         <div v-if="view === 'services'" class="main__inner">
+          <ServiceMatches
+            v-if="matchService"
+            :service="matchService"
+            :items="matchItems"
+            :total="matchTotal"
+            :page="matchPage"
+            :page-size="matchPageSize"
+            :total-pages="matchTotalPages"
+            :loading="matchLoading"
+            :error="matchError"
+            :resolve="resolve"
+            :busy-ids="busyIds"
+            @back="closeMatches"
+            @go="goToMatch"
+            @retry="loadMatches"
+            @interest="onInterest"
+          />
+
           <ServicesView
+            v-else
             :items="services"
             :loading="servicesLoading"
             :saving="servicesSaving"
@@ -217,6 +247,7 @@ onMounted(() => {
             @edit="onEditService"
             @remove="removeService"
             @retry="loadServices"
+            @matches="openMatches"
           />
         </div>
 

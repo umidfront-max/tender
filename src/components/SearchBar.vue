@@ -58,6 +58,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
     <kbd v-if="!model" class="search__kbd">⌘K</kbd>
 
+    <!-- Backend q ni 3 tilda ma'no bo'yicha qidiradi — tugma shuni ishga tushiradi -->
+    <button class="search__go" :disabled="loading" @click="emit('search')">
+      <i class="ti ti-sparkles" />
+      <span>AI bilan qidirish</span>
+    </button>
+
     <span class="search__bar" />
   </div>
 </template>
@@ -67,7 +73,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   position: relative;
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 56px;
+  padding-right: 6px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
@@ -78,7 +85,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .search:focus-within { border-color: var(--accent); box-shadow: var(--ring); }
 
 .search__icon {
-  position: absolute; left: 14px;
+  position: absolute; left: 18px;
   font-size: 18px; color: var(--text-3);
   pointer-events: none;
   transition: color var(--dur-fast) var(--ease);
@@ -88,10 +95,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .search__input {
   flex: 1;
   height: 100%;
-  padding: 0 76px 0 42px;
+  min-width: 0;
+  padding: 0 12px 0 48px;
   border: none;
   background: transparent;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text);
 }
 .search__input:focus { outline: none; }
@@ -99,7 +107,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .search__input::-webkit-search-cancel-button { display: none; }
 
 .search__clear {
-  position: absolute; right: 12px;
+  margin-right: 10px;
+  flex-shrink: 0;
   width: 24px; height: 24px;
   display: grid; place-items: center;
   border: none; border-radius: 50%;
@@ -112,7 +121,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .search__clear:hover { background: var(--border-strong); color: var(--text); }
 
 .search__kbd {
-  position: absolute; right: 12px;
+  margin-right: 10px;
+  flex-shrink: 0;
   padding: 3px 7px;
   font-family: var(--font);
   font-size: 11px; font-weight: 600;
@@ -122,6 +132,28 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   border-radius: var(--r-xs);
   pointer-events: none;
 }
+
+.search__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 18px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--violet-700);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+.search__go i { font-size: 16px; }
+.search__go:hover:not(:disabled) { background: color-mix(in srgb, var(--violet-700) 85%, #000); }
+.search__go:focus-visible { outline: none; box-shadow: var(--ring); }
+.search__go:disabled { opacity: .7; cursor: default; }
 
 /* Yuklanish chizig'i */
 .search__bar {
@@ -142,6 +174,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 @media (max-width: 620px) {
   .search__kbd { display: none; }
-  .search__input { padding-right: 44px; }
+  .search { height: 50px; }
+  .search__go { width: 40px; height: 38px; padding: 0; justify-content: center; }
+  .search__go span { display: none; }
 }
 </style>

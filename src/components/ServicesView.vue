@@ -14,7 +14,7 @@ const props = defineProps({
   error:   { type: String, default: null }
 })
 
-const emit = defineEmits(['add', 'edit', 'remove', 'retry'])
+const emit = defineEmits(['add', 'edit', 'remove', 'retry', 'matches'])
 
 const BLANK = { name: '', description: '', url: '' }
 
@@ -145,9 +145,15 @@ function confirmRemove(s) {
           <h3 class="row__name">{{ s.name }}</h3>
           <p v-if="s.description" class="row__desc">{{ s.description }}</p>
           <div class="row__meta">
-            <span v-if="s.matches_count != null" class="chip chip--cnt">
+            <button
+              v-if="s.matches_count != null"
+              class="chip chip--cnt"
+              title="Shu xizmatga mos tenderlarni ko'rish"
+              @click="emit('matches', s)"
+            >
               <i class="ti ti-sparkles" />{{ formatNumber(s.matches_count) }} ta mos tender
-            </span>
+              <i class="ti ti-chevron-right" />
+            </button>
             <a v-if="s.url" class="row__link" :href="s.url" target="_blank" rel="noopener noreferrer">
               <i class="ti ti-external-link" />Havola
             </a>
@@ -254,7 +260,16 @@ function confirmRemove(s) {
   overflow: hidden;
 }
 .row__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.chip--cnt { background: color-mix(in srgb, var(--violet-500) 12%, transparent); color: color-mix(in srgb, var(--violet-500) 72%, var(--text)); }
+.chip--cnt {
+  background: color-mix(in srgb, var(--violet-500) 12%, transparent);
+  color: color-mix(in srgb, var(--violet-500) 72%, var(--text));
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.chip--cnt:hover { background: color-mix(in srgb, var(--violet-500) 20%, transparent); }
+.chip--cnt:focus-visible { outline: none; box-shadow: var(--ring); }
 .row__link {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; color: var(--text-3); text-decoration: none;
