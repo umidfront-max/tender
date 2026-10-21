@@ -53,7 +53,10 @@ export const BUYER_TYPES = Object.freeze([
  * Bo'sh qiymat — parametr yuborilmaydi va API o'zi tanlaydi:
  * qidiruvda `relevance`, oddiy ro'yxatda `newest`.
  */
-export const SORTS = Object.freeze(['relevance', 'match', 'newest', 'oldest', 'price_asc', 'price_desc'])
+export const SORTS = Object.freeze([
+  'relevance', 'match', 'newest', 'oldest',
+  'price_asc', 'price_desc', 'deadline_soon', 'deadline_late'
+])
 
 /** "Mos keladi" tabi uchun minimal AI moslik foizi */
 export const MATCH_THRESHOLD = 70
@@ -160,7 +163,11 @@ export function useTenders() {
       loadMatchCount()
     } catch (e) {
       if (e.name === 'AbortError') return
-      error.value = e.message
+      // Muddat bo'yicha saralash backendga qo'shilgunicha 422 qaytadi —
+      // bunda "server ishlamayapti" deyish chalg'ituvchi bo'lardi
+      error.value = e.status === 422 && sort.value.startsWith('deadline')
+        ? "Muddat bo'yicha saralashni server hali qo'llamaydi — boshqa saralashni tanlang"
+        : `${e.message}. Backend ishlayotganini va manzil to'g'riligini tekshiring`
       items.value = []
       total.value = 0
       pages.value = 1

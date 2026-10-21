@@ -22,7 +22,7 @@ defineEmits(['retry', 'reset', 'interest'])
     tone="error"
     icon="ti-plug-connected-x"
     title="Server bilan aloqa yo'q"
-    :message="`${error}. Backend ishlayotganini va manzil to'g'riligini tekshiring.`"
+    :message="error"
     action-text="Qayta urinish"
     @action="$emit('retry')"
   />

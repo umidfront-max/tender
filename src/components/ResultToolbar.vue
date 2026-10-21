@@ -25,7 +25,9 @@ const options = computed(() => [
   { value: 'newest',     label: 'Eng yangi' },
   { value: 'oldest',     label: 'Eng eski' },
   { value: 'price_desc', label: 'Narx: yuqoridan' },
-  { value: 'price_asc',  label: 'Narx: pastdan' }
+  { value: 'price_asc',  label: 'Narx: pastdan' },
+  { value: 'deadline_soon', label: 'Muddati: eng yaqin' },
+  { value: 'deadline_late', label: 'Muddati: eng uzoq' }
 ])
 </script>
 
