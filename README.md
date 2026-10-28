@@ -78,7 +78,7 @@ Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.10:8000/docs`
 
 | Endpoint | Qachon | Parametrlar |
 |---|---|---|
-| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, interest, category, domain, sector, buyer_type, company_tin, price_min, price_max, date_from, date_to, sort, page, page_size` |
+| `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, ai, interest, category, domain, sector, buyer_type, price_min, price_max, date_from, date_to, sort, page, page_size` |
 | `GET /api/v1/items/stats` | tab sonlari, filtr o'zgarganda | `domain, category, ending_days` |
 | `PATCH /api/v1/items/{id}/interest` | kartadagi belgilash tugmalari | body: `{"interest": "interested" \| "not_interested" \| "new"}` |
 | `GET /api/v1/sources` | ilova ochilganda bir marta | `kind` (standart `tender`), `sector` |
@@ -101,6 +101,21 @@ raqam kiritilsa backend uni o'zi STIR deb qidiradi.
 
 Qidiruv maydoniga **faqat raqam** kiritilsa backend uni STIR yoki tender kodi deb
 aniq qidiradi, ma'no bo'yicha emas. Shuning uchun alohida `ident` parametri kerak emas.
+
+`ai=1` — "AI bilan qidirish" tugmasi qo'shadigan parametr: sinonim va ma'no
+bo'yicha qidiradi, so'z imloviy xato bilan yozilsa ham topadi (`komputer` ->
+`kompyuter`). Oddiy yozishda yuborilmaydi — faqat tugma bosilganda.
+
+**AI moslik uch holatda keladi** va kartadagi halqa shunga qarab o'zgaradi:
+
+| `match_score` | `ai_comment` | Kartada |
+|---|---|---|
+| `null` | `null` | «AI jarayonda» — hali baholanmagan |
+| `null` | matn bor | «Moslik yo'q» — 40% dan past |
+| 40–100 | matn bor | foiz + izoh, `match_service` tafsilotlarda |
+
+`sort=match` eng mos kelganlarni yuqoriga chiqaradi. Alohida "Mos keladi" tabi
+yo'q — u 70% chegarasi tufayli deyarli doim bo'sh turardi.
 
 ### Manbalar guruhi
 

@@ -6,9 +6,13 @@ defineProps({
   loading:     { type: Boolean, default: false },
   // Faqat raqam kiritilsa backend uni STIR/tender kodi deb aniq qidiradi
   placeholder: { type: String, default: "Tender nomi, tashkilot, STIR yoki kalit so'z…" },
-  label:       { type: String, default: 'Tenderlarni qidirish' }
+  label:       { type: String, default: 'Tenderlarni qidirish' },
+  // Qonunlar bo'limida AI qidiruvi yo'q — tugma faqat tenderlarda chiqadi
+  ai:          { type: Boolean, default: false },
+  // Hozir ko'rinayotgan natijalar AI qidiruvidanmi
+  aiActive:    { type: Boolean, default: false }
 })
-const emit = defineEmits(['search', 'input-debounced'])
+const emit = defineEmits(['search', 'input-debounced', 'ai-search'])
 
 const inputEl = ref(null)
 
@@ -58,9 +62,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
     <kbd v-if="!model" class="search__kbd">⌘K</kbd>
 
-    <!-- Backend q ni 3 tilda ma'no bo'yicha qidiradi — tugma shuni ishga tushiradi -->
-    <button class="search__go" :disabled="loading" @click="emit('search')">
-      <i class="ti ti-sparkles" />
+    <!-- ai=1: sinonim va ma'no bo'yicha, imloviy xato bilan yozilsa ham topadi -->
+    <button
+      v-if="ai"
+      class="search__go"
+      :class="{ 'search__go--on': aiActive }"
+      :disabled="loading || !model.trim()"
+      :title="model.trim() ? 'Ma\'no va sinonimlar bo\'yicha qidirish' : 'Avval qidiruv so\'zini yozing'"
+      @click="emit('ai-search')"
+    >
+      <i class="ti" :class="aiActive ? 'ti-sparkles-filled' : 'ti-sparkles'" />
       <span>AI bilan qidirish</span>
     </button>
 
@@ -153,7 +164,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .search__go i { font-size: 16px; }
 .search__go:hover:not(:disabled) { background: color-mix(in srgb, var(--violet-700) 85%, #000); }
 .search__go:focus-visible { outline: none; box-shadow: var(--ring); }
-.search__go:disabled { opacity: .7; cursor: default; }
+.search__go:disabled { opacity: .45; cursor: default; }
+/* Natijalar AI qidiruvidan — tugma yoqilgan holatda qoladi */
+.search__go--on { box-shadow: 0 0 0 2px color-mix(in srgb, var(--violet-500) 45%, transparent); }
 
 /* Yuklanish chizig'i */
 .search__bar {

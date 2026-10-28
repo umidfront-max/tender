@@ -22,9 +22,9 @@ import { useServiceMatches } from '@/composables/useServiceMatches'
 
 const {
   filters, tab, sort, page, pageSize,
-  items, total, loading, error,
+  items, total, loading, error, aiMode,
   isSearchMode, totalPages, activeFilterCount,
-  load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
+  load, apply, applyDebounced, applyAi, goTo, toggleDomains, setInterest, reset
 } = useTenders()
 
 const { sources, groups, load: loadSources, resolve } = useSources()
@@ -274,8 +274,11 @@ onMounted(() => {
           <SearchBar
             v-model="filters.q"
             :loading="loading"
+            ai
+            :ai-active="aiMode"
             @search="apply"
             @input-debounced="applyDebounced"
+            @ai-search="applyAi"
           />
 
           <StatsBar :stats="stats" :loading="statsLoading" />

@@ -78,6 +78,9 @@ export function useTenders() {
   const tab      = ref('all')   // TABS dagi qiymat
   const interest = computed(() => tab.value)
   const sort     = ref('')   // '' = API standarti
+  // "AI bilan qidirish" bosilganda ai=1 yuboriladi: sinonim va ma'no
+  // bo'yicha, imloviy xato bilan yozilgan so'zni ham topadi
+  const aiMode   = ref(false)
   const page     = ref(1)
   const pageSize = ref(12)   // API cheklovi: 1..100
 
@@ -113,6 +116,8 @@ export function useTenders() {
     const q = filters.q.trim()
     return {
       q:          q || undefined,
+      // q bo'lmasa ai ning ma'nosi yo'q
+      ai:         q && aiMode.value ? 1 : undefined,
       category:   filters.category || undefined,
       // API: bitta 'etender.uzex.uz' yoki bir nechtasi 'a.uz,b.uz'
       domain:     filters.domains.length ? filters.domains.join(',') : undefined,
@@ -172,10 +177,18 @@ export function useTenders() {
     load()
   }
 
-  /** Qidiruv maydoni uchun — debounce bilan */
+  /** Qidiruv maydoni uchun — debounce bilan. Yozish oddiy qidiruvga qaytaradi */
   function applyDebounced(delay = 350) {
+    aiMode.value = false
     clearTimeout(debounceId)
     debounceId = setTimeout(apply, delay)
+  }
+
+  /** "AI bilan qidirish" tugmasi */
+  function applyAi() {
+    clearTimeout(debounceId)
+    aiMode.value = true
+    apply()
   }
 
   function goTo(n) {
@@ -243,6 +256,7 @@ export function useTenders() {
     Object.assign(filters, cloneDefaults())
     filters.sector = sector
     filters.domains = domains
+    aiMode.value = false
     syncingSort = sort.value !== ''
     sort.value = ''
 
@@ -272,9 +286,9 @@ export function useTenders() {
   })
 
   return {
-    filters, tab, interest, sort, page, pageSize,
+    filters, tab, interest, sort, page, pageSize, aiMode,
     items, total, pages, loading, error, lastQuery,
     isSearchMode, totalPages, activeFilterCount,
-    load, apply, applyDebounced, goTo, toggleDomains, setInterest, reset
+    load, apply, applyDebounced, applyAi, goTo, toggleDomains, setInterest, reset
   }
 }

@@ -40,14 +40,28 @@ const tenderType = computed(() => {
 })
 
 /**
- * AI moslik. match_score null bo'lsa — hali baholanmagan: skoring fonda
- * ishlaydi, yangi tenderlarda bir necha daqiqa null turishi normal.
+ * AI moslik uch holatda keladi:
+ *   score 40-100            — moslik bor, foiz ko'rsatiladi
+ *   score null, izoh yo'q   — hali baholanmagan (skoring fonda ishlaydi)
+ *   score null, izoh bor    — moslik topilmadi (40% dan past)
  */
-const match   = computed(() => matchInfo(props.item.match_score))
+const match = computed(() => matchInfo(props.item.match_score))
+
+const matchState = computed(() => {
+  if (match.value) return 'scored'
+  return props.item.ai_comment ? 'none' : 'pending'
+})
+
+const RING = Object.freeze({
+  scored:  { value: null, label: 'AI moslik',    title: 'AI moslik bahosi' },
+  pending: { value: '·· ', label: 'AI jarayonda', title: 'AI hali bu tenderni baholamagan' },
+  none:    { value: '—',   label: "Moslik yo'q",  title: 'Bizning xizmatlarimizga mos kelmadi' }
+})
+
+const ring = computed(() => RING[matchState.value])
+
 /** Halqa uzunligi: 2πr, r = 22 */
 const RING_LEN = 2 * Math.PI * 22
-
-const scoring = computed(() => props.item.match_score === null || props.item.match_score === undefined)
 
 /** Xodim belgisi: new | interested | not_interested */
 const interest = computed(() => props.item.interest ?? 'new')
@@ -106,8 +120,8 @@ function mark(value) {
         <!-- AI moslik halqasi; null = hali baholanmagan -->
         <span
           class="ring"
-          :class="match ? `ring--${match.tone}` : 'ring--none'"
-          :title="item.match_service ? `Eng mos xizmat: ${item.match_service}` : 'AI moslik bahosi'"
+          :class="match ? `ring--${match.tone}` : `ring--${matchState}`"
+          :title="item.match_service ? `Eng mos xizmat: ${item.match_service}` : ring.title"
         >
           <svg class="ring__svg" viewBox="0 0 52 52" aria-hidden="true">
             <circle class="ring__track" cx="26" cy="26" r="22" />
@@ -119,8 +133,8 @@ function mark(value) {
               :stroke-dashoffset="RING_LEN * (1 - Math.min(match.value, 100) / 100)"
             />
           </svg>
-          <span class="ring__val mono">{{ match ? match.text : '–' }}</span>
-          <span class="ring__label">{{ match ? 'AI moslik' : (scoring ? 'AI tahlil qilmoqda' : 'AI moslik') }}</span>
+          <span class="ring__val mono">{{ match ? match.text : ring.value }}</span>
+          <span class="ring__label">{{ ring.label }}</span>
         </span>
 
         <span class="card__body">
@@ -148,7 +162,7 @@ function mark(value) {
 
           <!-- Yopiq kartada 2 qatorga kesiladi; ochilganda panelda to'liq chiqadi,
                shuning uchun bu yerda takrorlanmaydi -->
-          <span v-if="item.ai_comment && !open" class="card__ai">
+          <span v-if="item.ai_comment && matchState === 'scored' && !open" class="card__ai">
             <span class="card__ai-text">
               <i class="ti ti-sparkles" /><b>AI:</b> {{ item.ai_comment }}
             </span>
@@ -313,6 +327,11 @@ function mark(value) {
 .ring--high { --ring-c: var(--ok-500);   --ring-fg: var(--ok-fg); }
 .ring--mid  { --ring-c: var(--warn-500); --ring-fg: var(--warn-fg); }
 .ring--low  { --ring-c: var(--n-400);    --ring-fg: var(--text-2); }
+
+/* Baholanmagan — nuqtalar sekin miltillaydi; moslik yo'q — xira kulrang */
+.ring--pending .ring__val { animation: blink 1.4s var(--ease) infinite; }
+.ring--none { opacity: .72; }
+@keyframes blink { 50% { opacity: .35; } }
 
 .ring__svg { width: 56px; height: 56px; transform: rotate(-90deg); }
 .ring__track { fill: none; stroke: var(--border-strong); stroke-width: 4; }
