@@ -31,6 +31,14 @@ export function fetchStats(params, signal) {
 }
 
 /**
+ * GET /api/v1/items/categories — kategoriya filtri qiymatlari, soni bilan.
+ * @returns {Promise<{category: string, count: number}[]>}
+ */
+export function fetchCategories(signal) {
+  return request('/api/v1/items/categories', { signal })
+}
+
+/**
  * PATCH /api/v1/items/{id}/interest — xodim belgisi, bazada saqlanadi.
  * @param {number} id
  * @param {'new'|'interested'|'not_interested'} interest  'new' = belgini olib tashlash

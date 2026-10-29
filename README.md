@@ -44,7 +44,7 @@ src/
 ├── composables/
 │   ├── useTenders.js      filtrlar, sahifalash, saralash, statistika — asosiy logika
 │   ├── useSources.js      manbalar keshi va rang biriktirish
-│   ├── useCategories.js   kategoriyalarni javoblardan yig'ish
+│   ├── useCategories.js   kategoriya filtri ro'yxati (/items/categories)
 │   ├── useStats.js        tab sonlari (/items/stats)
 │   ├── useCollect.js      qo'lda yig'ish + holat pollingi
 │   ├── useLaws.js         qonunlar ro'yxati va filtrlari
@@ -79,6 +79,7 @@ Backend: **aggregator** (FastAPI) — Swagger: `http://192.168.1.10:8000/docs`
 | Endpoint | Qachon | Parametrlar |
 |---|---|---|
 | `GET /api/v1/items` | har bir ro'yxat va qidiruv | `q, ai, interest, category, domain, sector, buyer_type, price_min, price_max, date_from, date_to, sort, page, page_size` |
+| `GET /api/v1/items/categories` | ilova ochilganda va yig'ishdan keyin | — → `[{category, count}]` |
 | `GET /api/v1/items/stats` | tab sonlari, filtr o'zgarganda | `domain, category, ending_days` |
 | `PATCH /api/v1/items/{id}/interest` | kartadagi belgilash tugmalari | body: `{"interest": "interested" \| "not_interested" \| "new"}` |
 | `GET /api/v1/sources` | ilova ochilganda bir marta | `kind` (standart `tender`), `sector` |
@@ -126,8 +127,9 @@ tanlanadi; qisman tanlangan guruhda chiziqcha belgisi chiqadi.
 
 `kind` standart qiymati `tender`, shuning uchun `lex.uz` bu ro'yxatga tushmaydi.
 
-`category` **aynan** mos kelishi kerak va ro'yxati uchun alohida endpoint yo'q,
-shuning uchun qiymatlar javoblardan yig'iladi (`useCategories`).
+`category` **aynan** mos kelishi kerak — qiymatlar `/items/categories` dan olinadi
+(qisqa uz nomlar, aniqlanmaganlar `Boshqa`). Itemdagi `category_src` — manbaning
+asl nomi, kartadagi kategoriya chipi ustiga olib borilganda ko'rinadi.
 
 ### Tablar va belgilash
 

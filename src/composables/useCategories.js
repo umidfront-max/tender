@@ -1,58 +1,47 @@
 import { ref, computed } from 'vue'
-import { fetchItems } from '@/api/tenders'
-import { categoryLabel } from '@/utils/format'
+import { fetchCategories } from '@/api/tenders'
 
 /**
- * API da kategoriyalar ro'yxati uchun alohida endpoint yo'q, `category` filtri esa
- * aynan mos kelishni talab qiladi. Shuning uchun qiymatlarni ma'lumotning o'zidan yig'amiz:
- * ilova ochilganda bir marta katta sahifa olib "urug'lantiramiz", keyin har bir
- * javobdan yangi kategoriyalarni qo'shib boramiz.
+ * Kategoriya filtri qiymatlari — GET /items/categories dan.
+ * Backend nomlarni o'zi bir xil qisqa ko'rinishga (uz) keltiradi,
+ * aniqlanmaganlar "Boshqa" ga tushadi. `category` filtri aynan mos kelishni
+ * talab qiladi, shuning uchun qiymatni o'zgartirmasdan yuboramiz.
  */
 
-const known = ref(new Set())
+const list = ref([])   // [{ category, count }]
 const loading = ref(false)
-let seeded = false
+let loaded = false
+
+const OTHER = 'Boshqa'
 
 export function useCategories() {
-  /** Har bir /items javobidan yangi kategoriyalarni yig'ib boradi */
-  function collect(items = []) {
-    let changed = false
-    for (const it of items) {
-      if (it?.category && !known.value.has(it.category)) {
-        known.value.add(it.category)
-        changed = true
-      }
-    }
-    if (changed) known.value = new Set(known.value)   // reaktivlik uchun
-  }
-
-  /** Ilova ochilganda — bitta katta sahifa, faqat kategoriyalarni bilib olish uchun */
-  async function seed(force = false) {
-    if (seeded && !force) return
-    seeded = true
+  /** @param {boolean} [force]  yig'ishdan keyin sonlarni yangilash uchun */
+  async function load(force = false) {
+    if (loaded && !force) return
+    loaded = true
     loading.value = true
     try {
-      const data = await fetchItems({ page_size: 100, sort: 'newest' })
-      collect(data?.items ?? [])
+      const data = await fetchCategories()
+      list.value = Array.isArray(data) ? data.filter(c => c?.category) : []
     } catch {
-      seeded = false   // keyingi urinishda qayta harakat qilsin
+      loaded = false   // keyingi urinishda qayta harakat qilsin
     } finally {
       loading.value = false
     }
   }
 
-  /** Select uchun: 'general' oldinda, qolganlari alifbo bo'yicha */
+  /** Select uchun: alifbo bo'yicha, "Boshqa" oxirida, yonida soni */
   const options = computed(() => {
-    const list = [...known.value].sort((a, b) => {
-      if (a === 'general') return -1
-      if (b === 'general') return 1
-      return a.localeCompare(b, 'ru')
+    const sorted = [...list.value].sort((a, b) => {
+      if (a.category === OTHER) return 1
+      if (b.category === OTHER) return -1
+      return a.category.localeCompare(b.category, 'uz')
     })
     return [
       { value: '', label: 'Barcha kategoriyalar' },
-      ...list.map(v => ({ value: v, label: categoryLabel(v) }))
+      ...sorted.map(c => ({ value: c.category, label: `${c.category} (${c.count})` }))
     ]
   })
 
-  return { options, loading, collect, seed }
+  return { options, loading, load }
 }

@@ -75,9 +75,15 @@ const goods      = computed(() => extra.value.goods ?? [])
  * u kartaning yuqorisida chip bo'lib turibdi, panelda qaytarmaymiz.
  */
 const categories = computed(() => {
-  const main = String(props.item.category ?? '').trim().toLowerCase()
-  return (extra.value.categories ?? [])
-    .filter(c => String(c ?? '').trim().toLowerCase() !== main)
+  const norm = v => String(v ?? '').trim().toLowerCase()
+  const shown = new Set([norm(props.item.category), norm(props.item.category_src)])
+  return (extra.value.categories ?? []).filter(c => !shown.has(norm(c)))
+})
+
+/** Manbadagi asl kategoriya nomi — chip ustiga olib borilganda ko'rinadi */
+const categorySrc = computed(() => {
+  const src = String(props.item.category_src ?? '').trim()
+  return src && src !== 'general' && src !== props.item.category ? src : undefined
 })
 const files      = computed(() => extra.value.files ?? [])
 
@@ -151,7 +157,7 @@ function mark(value) {
           <span class="card__meta">
             <span class="chip chip--src">{{ source.name || item.domain }}</span>
             <span v-if="tenderType" class="chip chip--tag">{{ tenderType }}</span>
-            <span v-if="item.category" class="chip chip--tag">{{ categoryLabel(item.category) }}</span>
+            <span v-if="item.category" class="chip chip--tag" :title="categorySrc">{{ categoryLabel(item.category) }}</span>
             <span v-if="status" class="chip chip--tag">{{ status.text }}</span>
             <span v-if="buyerType" class="chip chip--tag">{{ buyerType }}</span>
             <span v-if="score" class="chip chip--score" title="Qidiruv moslik bahosi">

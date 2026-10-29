@@ -28,11 +28,8 @@ const {
 } = useTenders()
 
 const { sources, groups, load: loadSources, resolve } = useSources()
-const { options: categories, collect: collectCategories, seed: seedCategories } = useCategories()
+const { options: categories, load: loadCategories } = useCategories()
 const { stats, loading: statsLoading, load: loadStats, shift: shiftStats } = useStats()
-
-// API da kategoriyalar endpointi yo'q — qiymatlarni javoblardan yig'amiz
-watch(items, collectCategories)
 
 const sidebarOpen = ref(false)
 
@@ -137,6 +134,7 @@ watch(sidebarOpen, (open) => {
 function reloadAll() {
   load()
   loadStats(statsParams.value)
+  loadCategories(true)   // yangi tenderlar bilan sonlar ham o'zgaradi
   if (lawsLoaded.value) loadLaws()
 }
 
@@ -180,7 +178,7 @@ function onToggleDomains(domains) {
 
 onMounted(() => {
   loadSources()
-  seedCategories()
+  loadCategories()
   loadStats(statsParams.value)
   load()
   probeCollect()   // boshqa joyda yig'ish ketayotgan bo'lsa ulanib olamiz

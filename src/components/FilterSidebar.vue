@@ -7,7 +7,7 @@ const filters = defineModel('filters', { type: Object, required: true })
 
 const props = defineProps({
   // /api/v1/items dagi `category` aynan mos kelishi kerak, shuning uchun
-  // qiymatlar ma'lumotdan yig'iladi (useCategories)
+  // qiymatlar GET /items/categories dan keladi (useCategories)
   categories:  { type: Array, default: () => [] },
   // Joriy toifadagi manbalar: Davlat'da saytlar, Banklar'da banklar
   sources:     { type: Array, default: () => [] },
