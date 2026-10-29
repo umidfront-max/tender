@@ -137,12 +137,16 @@ export function useTenders() {
     }
   }
 
-  async function load() {
+  /**
+   * @param {{silent?: boolean}} [opts]  silent — skeleton ko'rsatmasdan
+   *   yangilash (belgilashdan keyin sahifani to'ldirishda ro'yxat miltillamasin)
+   */
+  async function load({ silent = false } = {}) {
     controller?.abort()
     controller = new AbortController()
     const signal = controller.signal
 
-    loading.value = true
+    if (!silent) loading.value = true
     error.value = null
 
     try {
@@ -222,9 +226,28 @@ export function useTenders() {
       if (i !== -1) {
         items.value.splice(i, 1)
         total.value = Math.max(0, total.value - 1)
+        scheduleRefill()
       }
     }
     return prev
+  }
+
+  /**
+   * Belgilangan tender joriy tabdan chiqqach sahifa kamayib qoladi —
+   * keyingi sahifadagilar surilib kelishi uchun joriy sahifani qayta so'raymiz.
+   * Ketma-ket bir nechta belgilash bitta so'rovga yig'iladi.
+   *
+   * Backend chegaradan oshgan sahifani o'zi tuzatmaydi (bo'sh qaytaradi),
+   * shuning uchun oxirgi sahifadagi hammasi belgilansa oldingisiga o'tamiz.
+   */
+  let refillId = null
+  function scheduleRefill() {
+    clearTimeout(refillId)
+    refillId = setTimeout(() => {
+      const last = Math.max(1, Math.ceil(total.value / pageSize.value))
+      if (page.value > last) page.value = last
+      load({ silent: items.value.length > 0 })
+    }, 600)
   }
 
 /**
