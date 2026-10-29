@@ -143,7 +143,9 @@ input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; marg
 
 /* ── Vue transitionlar ── */
 .list-enter-active { animation: fade-up var(--dur-slow) var(--ease-out) both; }
-.list-leave-active { transition: opacity var(--dur-fast) var(--ease); position: absolute; }
+/* Chiqib ketayotgan karta bosilmasin va eni o'zgarmasin — tez ketma-ket
+   belgilaganda klik so'nayotgan kartaga tushib qolmasin */
+.list-leave-active { transition: opacity var(--dur-fast) var(--ease); position: absolute; width: 100%; pointer-events: none; }
 .list-leave-to     { opacity: 0; }
 .list-move         { transition: transform var(--dur) var(--ease); }
 

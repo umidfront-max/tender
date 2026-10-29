@@ -175,9 +175,12 @@ function mark(value) {
         <span v-if="price" class="card__price mono" :title="fullPrice">{{ price }}</span>
         <span v-else class="card__price card__price--none">Narx ko'rsatilmagan</span>
 
+        <!-- Muddat yo'q bo'lsa ham joy saqlanadi: tugmalar har kartada bir xil
+             balandlikda tursin — ketma-ket tez bosganda sichqoncha siljimasin -->
         <span v-if="deadline" class="dl" :class="`dl--${deadline.tone}`">
           {{ deadline.text }} · {{ formatDateNumeric(extra.deadline) }}
         </span>
+        <span v-else class="dl dl--empty" aria-hidden="true">&nbsp;</span>
 
         <div class="card__acts">
           <button
@@ -470,6 +473,8 @@ function mark(value) {
 }
 
 .card__price {
+  height: 26px;
+  line-height: 26px;
   font-size: 18px; font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
@@ -478,6 +483,8 @@ function mark(value) {
 
 /* extra.deadline — muddat qanchalik yaqinligiga qarab rang */
 .dl {
+  height: 22px;
+  line-height: 16px;
   padding: 3px 8px;
   border-radius: var(--r-xs);
   font-size: 11.5px;
@@ -488,6 +495,7 @@ function mark(value) {
 .dl--urgent { background: var(--err-bg);  color: var(--err-fg); }
 .dl--soon   { background: var(--warn-bg); color: var(--warn-fg); }
 .dl--open   { background: var(--ok-bg);   color: var(--ok-fg); }
+.dl--empty  { visibility: hidden; }
 
 .card__acts { display: flex; gap: 6px; margin-top: 8px; }
 
@@ -694,6 +702,7 @@ function mark(value) {
     align-items: center;
     padding: 0 16px 14px;
   }
+  .dl--empty { display: none; }
   .card__acts { width: 100%; margin-top: 2px; }
   .mk { flex: 1; justify-content: center; }
   .card__link { margin-top: 0; }
